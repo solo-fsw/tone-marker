@@ -1,0 +1,4 @@
+# The .gitignore file specifies files and directories that should not be included in version control.
+
+# For example: the following line excludes the entire .vscode folder from version control
+.vscode/
