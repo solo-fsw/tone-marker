@@ -5,7 +5,7 @@ Device that uses sound tones to send markers.
 The purpose of the "Tone Marker" device is to translate spacial tones into TTL markers. The tones can be embedded into any system with an audio output (e.g. VR games, websites, cellphones), and allow those devices to send custom markers (all 256 values). This functionality is necessary for syncing recorded data (e.g. BIOPAC) with VR experiences, where hardware control is not possible. The current method os simply recording the sound does not work well, and requires considerable manual labor.
 
 ## Private Dev Log
-_This is the private dev log section. It will be deleted, and the branch squash-merged to main and deleted before the repo goes public. So log anything you want. As a test, let's try using an actual log (see log.md)._
+_This is the private dev log section. It will be deleted, and the branch squash-merged to main and deleted before the repo goes public. So log anything you want. As a test, let's try using an actual log (see notes/log.md)._
 
 ## Implementation 1 (Voice-Band DTMF):
 This project builds a device that decodes DTMF tones transferred to it via an analog audio line, and sends out corresponding digital markers. It uses a MT8870 DTMF decoder and a modified UsbParMarker.

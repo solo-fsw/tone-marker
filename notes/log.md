@@ -5,6 +5,7 @@ Log of development activities.
 - Elio:
   - Updated the project approach.
   - Asked Jens to participate in the project.
+  - Created a new repo which uses the software/hardware template, moved contents of old repo to it, and deleted old repo.
 
 ## 23 April, 2024
 - Elio:
