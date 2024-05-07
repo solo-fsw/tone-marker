@@ -1,6 +1,11 @@
 # Log
 Log of development activities.
 
+## 7 May, 2024
+
+- Jens:
+  - Created demo arduino leonardo sound marker implementation
+
 ## 24 April, 2024
 - Elio:
   - Updated the project approach.

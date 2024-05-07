@@ -6,6 +6,7 @@
 
 char buffer [200] = {0};
 unsigned int bufferLength = 0;
+// PORTD = 0x00;
 
 void receive() {
   bool Q1 = digitalRead(Q1_pin);
@@ -66,6 +67,16 @@ void loop() {
     }
   }
   if (substr[0] != '\0'){
-    Serial.println(substr);
+    int markerValue = atoi(substr);
+    if (markerValue <= 255){
+      Serial.println(markerValue);
+      // PORTD = markerValue;
+      // TODO: Reset PORTD to zero?
+    } else if (markerValue >= 256){
+      Serial.print("Remain at: ");
+      Serial.println(markerValue % 255);
+      // PORTD = markerValue % 255;
+      // TODO: Do not reset PORTD to zero?
+    }
   }
 }
