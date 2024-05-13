@@ -1,6 +1,12 @@
 # Log
 Log of development activities.
 
+## 13 May, 2024
+
+- Jens:
+  - Working character recognition code
+  - Prototype connections
+
 ## 7 May, 2024
 
 - Jens:
