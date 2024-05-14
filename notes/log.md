@@ -4,8 +4,9 @@ Log of development activities.
 ## 14 May, 2024
 
 - Jens:
-  - Connections to female port (connection to biosemi/biopac)
+  - Connections to female port (connection to biopac)
   - Clause for overflow (negative) markers
+  - Sucessful test with biopac, vr goggles and overlapping sound
 
 ## 13 May, 2024
 

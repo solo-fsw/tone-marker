@@ -110,17 +110,17 @@ void loop() {
     if (markerValue < 0){
       // TODO: Overflow error!
     } else if (markerValue <= 255){
-      Serial.print("Marker: ");
+      Serial.print("Marker set to: ");
       Serial.println(markerValue);
       PORTD = markerValue;
-      delay(10);
-      PORTD = 0x00;
     } else if (markerValue >= 256){
       Serial.print("Remain at ");
       Serial.print(markerValue % 255);
-      Serial.print(" instead of ");
+      Serial.print(" for 100 ms instead of ");
       Serial.println(markerValue);
       PORTD = markerValue % 255;
+      delay(100);
+      PORTD = 0x00;
     }
   }
 }
