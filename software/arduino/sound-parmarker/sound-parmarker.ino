@@ -107,18 +107,20 @@ void loop() {
   }
   if (substr[0] != '\0'){
     int markerValue = atoi(substr);
-    if (markerValue <= 255){
+    if (markerValue < 0){
+      // TODO: Overflow error!
+    } else if (markerValue <= 255){
       Serial.print("Marker: ");
       Serial.println(markerValue);
-      // PORTD = markerValue;
-      // TODO: Reset PORTD to zero?
+      PORTD = markerValue;
+      delay(10);
+      PORTD = 0x00;
     } else if (markerValue >= 256){
       Serial.print("Remain at ");
       Serial.print(markerValue % 255);
       Serial.print(" instead of ");
       Serial.println(markerValue);
-      // PORTD = markerValue % 255;
-      // TODO: Do not reset PORTD to zero?
+      PORTD = markerValue % 255;
     }
   }
 }
