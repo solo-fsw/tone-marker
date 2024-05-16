@@ -1,6 +1,17 @@
 # Log
 Log of development activities.
 
+## 16 May, 2024
+
+- Jens
+  - Meeting with Huseyin
+    - New meeting Thursday 23 May
+    - Change connector to fit BioSemi?
+    - Ask Evert to accompany next meeting?
+    - Ask Maarten to incoporate DTMF tones into the VR experience
+    - Write out the DTMF-marker communication protocol
+  - Work on 3D printed enclosure
+
 ## 14 May, 2024
 
 - Jens:
