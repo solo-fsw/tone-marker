@@ -1,12 +1,20 @@
 # Log
 Log of development activities.
 
+## 23 May, 2024
+
+- Jens
+  - Continue enclosure development
+  - Meeting with Huseyin and Evert
+    - NOTES
+
 ## 21 May, 2024
 
 - Jens
   - Sent DTMF markers to Vennila
   - Write out DTMF-marker communication protocol
   - Found correct biosemi cable
+  - Continue enclosure development
 
 ## 16 May, 2024
 
