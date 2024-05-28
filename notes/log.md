@@ -1,12 +1,21 @@
 # Log
 Log of development activities.
 
+## 28 May, 2024
+
+  - Jens
+    - Fixed LED issue
+    - Continue development of enclosure
+
 ## 23 May, 2024
 
 - Jens
   - Continue enclosure development
   - Meeting with Huseyin and Evert
-    - NOTES
+    - Current prototype works as expected
+    - Check if markers should be fired constantly or as pulses for actiview (as default)
+    - Continue developing enclosure
+    - Fix LED issue
 
 ## 21 May, 2024
 

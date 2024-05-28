@@ -21,6 +21,29 @@ const String Version;
 const String Serialno;
 const String HwVer;
 
+void setup() {
+  writeStringToEEPROM(10, "S01116");    //Use ones to program te serial number in the eeprom of the device
+  writeStringToEEPROM(20, "HW1");    //Use ones to program the hardware version in the eeprom of the device
+  DDRD = 0xFF; //PortD all pins output
+  PORTD = 0x00;
+  pinMode(LEDCC, OUTPUT);
+  digitalWrite(LEDCC, LOW);
+  Serial.begin(115200);     // opens serial port, sets data rate to 115200 bps
+  Serialno = readStringFromEEPROM(10);
+  HwVer= readStringFromEEPROM(20);
+  Version = String(HwVer + ":" + SwVer);   // Set HW version always 
+  TXLED0;
+
+  DDRF = DDRF | B00011101;  //PortF pins 7, 6, 5 and 1 Input
+  PORTF = 0x00;
+  PCICR = PCICR | B00000001;
+  PCMSK0 = PCMSK0 | B00001000;
+
+  PORTD = 0xFF;
+  delay(1000);
+  PORTD = 0x00;
+}
+
 //Soundmarker globals
 char buffer [200] = {0};
 unsigned int bufferLength = 0;
@@ -41,43 +64,8 @@ void receive() {
 }
 
 char decode_signal(byte signal) {
-  switch (signal) {
-    case 1:  return '1';
-    case 2:  return '2';
-    case 3:  return '3';
-    case 4:  return '4';
-    case 5:  return '5';
-    case 6:  return '6';
-    case 7:  return '7';
-    case 8:  return '8';
-    case 9:  return '9';
-    case 10: return '0';
-    case 11: return '*';
-    case 12: return '#';
-    case 13: return 'A';
-    case 14: return 'B';
-    case 15: return 'C';
-    case 0:  return 'D';
-    default: return '?';
-  }
-}
-
-void setup() {
-  writeStringToEEPROM(10, "S01116");    //Use ones to program te serial number in the eeprom of the device
-  writeStringToEEPROM(20, "HW1");    //Use ones to program the hardware version in the eeprom of the device
-  DDRD = 0xFF; //PortD all pins output
-  PORTD = 0x00;
-  DDRF = DDRF | B00011101;  //PortF pins 7, 6, 5 and 1 Input
-  PORTF = 0x00;
-  PCICR = PCICR | B00000001;
-  PCMSK0 = PCMSK0 | B00001000;
-  pinMode(LEDCC, OUTPUT);
-  digitalWrite(LEDCC, LOW);
-  Serial.begin(115200);     // opens serial port, sets data rate to 115200 bps
-  Serialno = readStringFromEEPROM(10);
-  HwVer= readStringFromEEPROM(20);
-  Version = String(HwVer + ":" + SwVer);   // Set HW version always 
-  TXLED0;
+  char conversion[16] = {'D', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '*', '#', 'A', 'B', 'C'};
+  return conversion[signal];
 }
 
 ISR(PCINT0_vect) {
