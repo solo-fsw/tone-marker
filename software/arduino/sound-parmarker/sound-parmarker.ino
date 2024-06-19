@@ -2,11 +2,11 @@
   Usb Parallel Marker Versie
   Copyright Leiden University SOLO - Evert 2018~2023
 */
-// #define stQ 11  // PB3 - PCINT3
-// #define Q1_pin 38  // PF5 - ADC5
-// #define Q2_pin 37  // PF6 - ADC6
-// #define Q3_pin 36  // PF7 - ADC7
-// #define Q4_pin 40  // PF1 - ADC1
+// stQ 11  // PB3 - PCINT3
+// Q1_pin 38  // PF5 - ADC5
+// Q2_pin 37  // PF6 - ADC6
+// Q3_pin 36  // PF7 - ADC7
+// Q4_pin 40  // PF1 - ADC1
 
 #undef TX_RX_LED_INIT
 #undef TXLED1
