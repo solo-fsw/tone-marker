@@ -1,6 +1,38 @@
 # Log
 Log of development activities.
 
+## 19 June, 2024
+
+- Jens
+  - Create documentation for device usage
+  - Update and clean repository
+
+## 17 June, 2024
+
+- Jens
+  - Install device at the Sylvius building
+
+## 14 June, 2024
+
+- Jens
+  - Finish development of enclosure v2
+  - Improve device wiring
+  - Assemble device
+
+## 13 June, 2024
+
+- Jens
+  - Finding setup problems that cause problems with the tonemarker device
+  - Re-evaluate enclosure
+- Elio
+  - Create enclosure v2
+
+## 7 June, 2024
+
+- Jens
+  - Final version enclosure v1
+  - Create final version of wiring
+
 ## 28 May, 2024
 
   - Jens

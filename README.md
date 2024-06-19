@@ -1,37 +1,39 @@
-# Tone Marker
-Device that uses sound tones to send markers.
+# Tone Markers
 
-## Purpose
-The purpose of the "Tone Marker" device is to translate spacial tones into TTL markers. The tones can be embedded into any system with an audio output (e.g. VR games, websites, cellphones), and allow those devices to send custom markers (all 256 values). This functionality is necessary for syncing recorded data (e.g. BIOPAC) with VR experiences, where hardware control is not possible. The current method of simply recording the sound does not work well, and requires considerable manual labor.
+![The Tone Marker device](./readme-media/toneMarkerDevice.png)
 
-## Communication protocol
+## Device purpose
 
-The device expects DTMF markers to start with a `*` and end with a `#`. Markers in the range of 0 to 255 can be produced. This means DTMF markers should be of the form `*55#` for, for example, a marker with value 55. Sending a marker of 256 (255 + 1) will send a marker of value 1 for 100ms, after which the device will reset to 0. The default markers (for example `*1#`) will remain at their specified value until another value is provided.
+The purpose of the "Tone Marker" device is to translate Dual-tone multi-frequency (DTMF) tones into Transistor-transistor Logic (TTL) markers. This allows any application with an audio output (e.g. virtual reality games, websites, cellphones) to send custom markers (values ranging from 0 up to 255) by embedding DTMF tones in the audio output.
 
-## Private Dev Log
-_This is the private dev log section. It will be deleted, and the branch squash-merged to main and deleted before the repo goes public. So log anything you want. As a test, let's try using an actual log (see notes/log.md)._
+Sending markers is necessary for synchronization of recorded data (e.g. BIOPAC measurements) with VR experiences, where hardware control is not possible.
 
-## Implementation 1 (Voice-Band DTMF):
-This project builds a device that decodes DTMF tones transferred to it via an analog audio line, and sends out corresponding digital markers. It uses a MT8870 DTMF decoder and a modified UsbParMarker.
+## Usage
 
-### Device
-Use a DTMF [decoder](https://www.tinytronics.nl/en/sensors/sound/mt8870-dtmf-module) to decode the sound, and send the data to a UsbParMarker. The UsbParMarker's DB25 connector has both inputs and outputs, but only the outputs are usually used. To access the input and isolate them from the output, use a blank male DB25 with solder cups (or ribbon cable DB25), then connect the DTMF decoder to the required pins, and the marker pins to a separate female DB25 connector. See usbParMarker schematic in docs folder. Note, to enable the VBUS out, the SJ1 jumper pad needs to be setup correctly.
+### Setup
 
-More info about Arduino and DTMF [here](https://www.youtube.com/watch?v=Wx6C4k_xxz0). 
+Internally, the Tone Marker device consists of a DTMF decoder ([MT8870 DTMF Module](https://www.tinytronics.nl/en/sensors/sound/mt8870-dtmf-module)) and a modified UsbParMarker ([UsbParMarker Version 3](https://github.com/solo-fsw/UsbParMarker)). Power is provided through a Mini-USB connection to a dedicated power source (such as a powerbank). The audio input (from e.g. the VR glasses) is fed into the DTMF decoder. Marker output is done through a Female DB25 connector, which is then connected to the required data recording device (e.g. BIOPAC, BIOSEMI).
 
-The device will be enclosed in a 3D printed enclosure, with three ports: a female DB25 for sending markers, a 3.5 mm jack for sound input, and a Mini-USB for power.
+An overview of the internal and external connections is shown below.
 
-![Diagram](./readme-media/dtmf-diagram.png)
+![An overview of the connection in / to the Tone Marker device](./readme-media/dtmf-diagram.png)
 
-Overview of the Tone-Marker device. Grey area denotes the device.
+### Communication protocol
 
-### Protocol
-Devise a communication protocol. Consider always sending 5 characters: a start character, three data characters, and an end character (e.g.: *123#). The characters denote the marker number (0 - 255). These markers are then set by the device and held until a new marker is sent. To have the device send a 100 ms marker pulse, send the marker value plus 255; e.g. *256# sends a marker with value 1 for 100 ms. Note that a zero pulse cannot be sent. This allows for easier generation of the tones compared to encoding the marker value in the three nibbles.
+The device expects DTMF markers to start with a `*` and end with a `#`. Markers in the range of 0 to 255 can be produced. 
 
-### Tone Generator and Testing 
-Make a website that generates the tones (or just [use this one](https://onlinesound.net/dtmf-generator)). Test the device by donning VR glasses, connecting it to the tone-marker device, using the VR browser to go to the tone website, and playing a tone sequence. 
+This means the device expects markers of the form `*55#`, which in this case results in a marker with value 55. The device will remain at value 55 until another (valid) DTMF marker is received
 
-Once a simple proof of concept has been built and tested, and the use-case shown, a more refined device can be created (perhaps with a custom PCB). 
+Requesting a marker of a value higher than 255 will result in a marker pulse of 100ms, after which the device will reset to a marker value of 0. For example, a DTMF sequence of `*256#` will result in a 100ms pulse of marker value 1.
 
-## FUTURE: Implementation 2 (Inaudible Markers)
-Use the Teensy 4 and its sound board to receive audio from a source, filter out the marker-tones, and feed it back to the participant. Consider using a low-pass filter (e.g. at 14 kHz) and keeping the marker tones above that frequency. Use [this](https://www.pjrc.com/teensy/gui/#) to design the filtering and tone detection.
+DTMF tone sequences can be generated by using a multitude of online generators such as [this one](https://onlinesound.net/dtmf-generator) or [this one](https://www.audiocheck.net/audiocheck_dtmf.php).
+
+## Notes
+
+### Power supply
+
+Some USB power adapters have some noise, which is then audible in the audio signal. In order to avoid this, the usage of a powerbank for powering the Tone Marker device is recommended.
+
+### Volume
+
+The DTMF decoder does not seem to work optimally (or even at all) at a volume under 75% (when testing using VR glasses). Functionality of the decoder can be checked by monitoring the red LEDs visible on the device cover. Marker functionality can be monitored by checking the green LEDs. 
