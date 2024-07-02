@@ -95,16 +95,23 @@ struct BitState {
   AudioAnalyzeToneDetect *freq_filter;
 };
 
+// For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles:
+// https://courses.cs.washington.edu/courses/cse466/11au/resources/GoertzelAlgorithmEETimes.pdf
+float SAMPELING_FREQUENCY = 44100; // Hz
+float GOERTZEL_CYCLES = 200;
+float FREQUENCY_MULTIPLES = SAMPELING_FREQUENCY / GOERTZEL_CYCLES;
+float STARTING_MULTIPLE = 73.0;  // 73 --> 16096.5
+
 // Initialize bits
 BitState bits[8] = {
-  {0, 0, 1, 2, 16000, 1.0, &filterBand1, &mixerMarker1, &toneMarker1},
-  {0, 1, 0, 3, 16500, 1.0, &filterBand2, &mixerMarker2, &toneMarker2},
-  {0, 2, 24, 12, 17000, 1.0, &filterBand3, &mixerMarker3, &toneMarker3},
-  {0, 3, 26, 16, 17500, 1.2, &filterBand4, &mixerMarker4, &toneMarker4},
-  {0, 4, 14, 18, 20000, 1.0, &filterBand5, &mixerMarker5, &toneMarker5},
-  {0, 5, 17, 22, 20000, 1.0, &filterBand6, &mixerMarker6, &toneMarker6},
-  {0, 6, 16, 23, 20000, 1.0, &filterBand7, &mixerMarker7, &toneMarker7},
-  {0, 7, 22, 24, 20000, 1.0, &filterBand8, &mixerMarker8, &toneMarker8}
+  {0, 0, 1, 2, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, &filterBand1, &mixerMarker1, &toneMarker1},
+  {0, 1, 0, 3, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, &filterBand2, &mixerMarker2, &toneMarker2},
+  {0, 2, 24, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 4.0, &filterBand3, &mixerMarker3, &toneMarker3},
+  {0, 3, 26, 16, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, &filterBand4, &mixerMarker4, &toneMarker4},
+  {0, 4, 14, 18, (STARTING_MULTIPLE + 4) * FREQUENCY_MULTIPLES, 6.0, &filterBand5, &mixerMarker5, &toneMarker5},
+  {0, 5, 17, 22, (STARTING_MULTIPLE + 5) * FREQUENCY_MULTIPLES, 6.0, &filterBand6, &mixerMarker6, &toneMarker6},
+  {0, 6, 16, 23, (STARTING_MULTIPLE + 6) * FREQUENCY_MULTIPLES, 6.0, &filterBand7, &mixerMarker7, &toneMarker7},
+  {0, 7, 22, 24, (STARTING_MULTIPLE + 7) * FREQUENCY_MULTIPLES, 6.0, &filterBand8, &mixerMarker8, &toneMarker8}
 };
 
 // Declare led strip
@@ -112,9 +119,9 @@ CRGB leds[N_LEDS * STRIPS];
 
 // Declare global variables and constants
 elapsedMillis msecs;
-const float AMPLITUDE_THRESHOLD = 0.95;  // Maximum value is correlated with the volume percentage of the connected pc
+const float AMPLITUDE_THRESHOLD = 0.5;  // Maximum value is correlated with the volume percentage of the connected pc
 const float FILTER_FREQ = 14000.0;
-const float DETECTION_THRESHOLD = 0.90;
+const float DETECTION_THRESHOLD = 0.5;
 
 
 void setup(){
@@ -155,8 +162,10 @@ void setup(){
   for(int idx = 0; idx < 8; idx++){
     pinMode(bits[idx].pinNr, OUTPUT);
     bits[idx].band_filter->setBandpass(0, bits[idx].frequency, 10.0);
+    bits[idx].band_filter->setLowpass(1, bits[idx].frequency - (0.5 * FREQUENCY_MULTIPLES), 10.0);
+    bits[idx].band_filter->setHighpass(2, bits[idx].frequency + (0.5 * FREQUENCY_MULTIPLES), 10.0);
     bits[idx].amplifier->gain(0, bits[idx].gain);
-    bits[idx].freq_filter->frequency(bits[idx].frequency, 80);
+    bits[idx].freq_filter->frequency(bits[idx].frequency, GOERTZEL_CYCLES);  // 200 cycles = 4.5 ms window length
   }
 }
 
@@ -167,9 +176,9 @@ void loop(){
       for(int idx = 0; idx < 8; idx++){
         bits[idx].state = bits[idx].freq_filter->read() > DETECTION_THRESHOLD;
         GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
-        // Serial.print(idx);
-        // Serial.print("  ");
-        // Serial.println(bits[idx].freq_filter->read());
+        Serial.print(idx);
+        Serial.print(" - ");
+        Serial.println(bits[idx].freq_filter->read());
       }
     }
   }
@@ -199,4 +208,5 @@ https://forum.pjrc.com/index.php?threads/tutorial-on-digital-i-o-atmega-pin-port
 https://forum.pjrc.com/index.php?threads/speed-of-digitalread-and-digitalwrite-with-teensy3-0.24573/
 https://forum.pjrc.com/index.php?threads/unclear-on-how-to-use-ddrx-and-portx-teensy-3-2.53950/
 https://arduino.stackexchange.com/questions/72440/what-is-the-equivilent-of-portx-for-teensy-4-0
+https://courses.cs.washington.edu/courses/cse466/11au/resources/GoertzelAlgorithmEETimes.pdf
 */
