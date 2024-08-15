@@ -102,9 +102,9 @@ struct BitState {
 // For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles:
 // https://courses.cs.washington.edu/courses/cse466/11au/resources/GoertzelAlgorithmEETimes.pdf
 float SAMPELING_FREQUENCY = 44100; // Hz
-float GOERTZEL_CYCLES = 200;
+float GOERTZEL_CYCLES = 150;
 float FREQUENCY_MULTIPLES = SAMPELING_FREQUENCY / GOERTZEL_CYCLES;
-float STARTING_MULTIPLE = 73.0;  // 73 --> 16096.5
+float STARTING_MULTIPLE = 55.0;  // 55 --> 16170.0
 
 // Initialize bits
 BitState bits[8] = {
@@ -132,14 +132,14 @@ const unsigned int TONE_DETECTION_DURATION = 250;
 
 float mixerLeftGain = 0.5;
 float mixerRightGain = 0.5;
-float mixerMarkerGain = 2.0;
+float mixerMarkerGain = 2.4;
 
 float lowpassQualityLeft1 = 1.0;
 float lowpassQualityLeft2 = 1.0;
 float lowpassQualityRight1 = 1.0;
 float lowpassQualityRight2 = 1.0;
-float highpassQuality = 10.0;
-float bandFilterQuality = 10.0;
+float highpassQuality = 8.0;
+float bandFilterQuality = 8.0;
 
 void setup(){
   // Start serial connection for debugging

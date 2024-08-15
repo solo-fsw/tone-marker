@@ -15,9 +15,6 @@ from tqdm.notebook import tqdm
 SAMPLING_FREQUENCY = 44100
 RANGE = [16000, 18000]
 DURATION = .5
-# STARTING_MULTIPLE = 73
-# GOERTZEL_CYCLES = 200
-# FREQUENCY_MULTIPLES = SAMPLING_FREQUENCY / GOERTZEL_CYCLES
 
 #%%
 def frequency_mapping(goertzel_cycles, n_bits=8):
@@ -117,15 +114,13 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device):
         sleep(.1)
         
         accuracy = np.zeros(n_tests)
-        for _ in tqdm(range(n_repetitions)):
+        for _ in tqdm(range(n_repetitions), desc = f"Testcase {nr+1}/{len(cases)}"):
             results = test_markers(bits, freq_map, device)
             accuracy += results
             
         accuracy /= n_repetitions
         with open(OUTFILE, 'a') as fo:
             fo.write(f"{np.sum(accuracy) / n_tests}, {mixerMarker}, {high}, {band}, {goertzel}, {', '.join(map(str, accuracy))}\n")
-        print(nr, accuracy)
-        print()
            
 #%%
 
@@ -142,7 +137,7 @@ if __name__ == "__main__":
         "goertzel": tuple([150])
     }
     
-    tune_parameters(bits, tune_ranges, 100, teensy)
+    tune_parameters(bits, tune_ranges, 10, teensy)
 
 #%%
 
