@@ -11,6 +11,7 @@ import IPython.display as ipd
 import os
 from pprint import pp
 from tqdm.notebook import tqdm
+import pandas as pd
 
 SAMPLING_FREQUENCY = 44100
 RANGE = [16000, 18000]
@@ -29,16 +30,20 @@ def frequency_mapping(goertzel_cycles, n_bits=8):
     pp(freq_mapping)
     return freq_mapping
 
-def makesine(freq):
+def makesine(freq, noise=0.0):
     t = np.linspace(0, DURATION, math.ceil(SAMPLING_FREQUENCY * DURATION))
     y = np.sin(2 * np.pi * freq * t)
+    if noise:
+        assert 0 <= noise <= 1
+        y *= 1 - noise
+        y += np.random.normal(0, 1, math.ceil(SAMPLING_FREQUENCY * DURATION)) * noise
     return y
 
-def create_sound(bits, freq_mapping, return_sound=False):
+def create_sound(bits, freq_mapping, noise = 0.0, return_sound=False):
     gain = [None, 0.3, 0.3, 0.11, 0.07][len(bits)]  # TODO: Generalize for eight bits
     sine = 0
     for b in bits:
-        sine += makesine(freq_mapping[b]) * gain
+        sine += makesine(freq_mapping[b], noise) * gain
         
     if return_sound:
         return ipd.Audio(sine, rate=SAMPLING_FREQUENCY, normalize = False, autoplay=True)
@@ -77,25 +82,25 @@ def collect_response(sound, device):
     device.flush()
     return np.unique(response)
 
-def test_markers(bits, freq_mapping, device):
+def test_markers(bits, freq_mapping, device, noise = 0.0):
     counter = np.zeros(2**len(bits) - 1)
     device.flush()
     for idx, p in enumerate(chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1))):
             correct = ''.join('1' if i in p else '0' for i in range(8))
-            sound = create_sound(p, freq_mapping)
+            sound = create_sound(p, freq_mapping, noise)
             response = collect_response(sound, device)
             if len(response) == 2 and response[-1] == correct:
                 counter[idx] += 1
                 
     return counter
 
-def tune_parameters(bits, tune_ranges, n_repetitions, device):
+def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
     cases = list(product(*tuple(tune_ranges.values())))
     n_tests = 2**len(bits) - 1
     
     if not os.path.exists(OUTFILE):
         with open(OUTFILE, 'w') as fo:
-            fo.write(f"accuracy, mixerMarkerGain, highpassQual, bandpassQual, goertzel, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
+            fo.write(f"accuracy, noise, mixerMarkerGain, highpassQual, bandpassQual, goertzel, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
             fo.close()
         
     print(f"Testing {len(cases)} cases in {n_tests} tests for {n_repetitions} repetitions.")
@@ -115,16 +120,16 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device):
         
         accuracy = np.zeros(n_tests)
         for _ in tqdm(range(n_repetitions), desc = f"Testcase {nr+1}/{len(cases)}"):
-            results = test_markers(bits, freq_map, device)
+            results = test_markers(bits, freq_map, device, noise)
             accuracy += results
             
         accuracy /= n_repetitions
         with open(OUTFILE, 'a') as fo:
-            fo.write(f"{np.sum(accuracy) / n_tests}, {mixerMarker}, {high}, {band}, {goertzel}, {', '.join(map(str, accuracy))}\n")
+            fo.write(f"{np.sum(accuracy) / n_tests}, {noise}, {mixerMarker}, {high}, {band}, {goertzel}, {', '.join(map(str, accuracy))}\n")
            
 #%%
 
-OUTFILE = os.path.abspath("../../data/tuning.txt")
+OUTFILE = os.path.abspath("../../data/noise_testing.txt")
 
 if __name__ == "__main__":
     teensy = connect()
@@ -137,11 +142,12 @@ if __name__ == "__main__":
         "goertzel": tuple([150])
     }
     
-    tune_parameters(bits, tune_ranges, 10, teensy)
+    noise = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    
+    for n in noise:
+        tune_parameters(bits, tune_ranges, 10, teensy, n)
 
 #%%
-
-import pandas as pd
 
 df = pd.read_csv(OUTFILE)
 df.round(3)
