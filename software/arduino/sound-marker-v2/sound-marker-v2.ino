@@ -12,6 +12,8 @@
 #define N_LEDS 8
 #define STRIPS 1
 
+// const bool audioDebugging = true;
+
 // GUItool: begin automatically generated code
 AudioInputI2S            i2s1;           //xy=101,321
 AudioFilterBiquad        filterMarker;   //xy=346,417
@@ -93,6 +95,8 @@ struct BitState {
   AudioFilterBiquad *band_filter;
   AudioMixer4 *amplifier;
   AudioAnalyzeToneDetect *freq_filter;
+  bool last_state;
+  elapsedMillis debounce_time;
 };
 
 // For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles:
@@ -104,14 +108,14 @@ float STARTING_MULTIPLE = 73.0;  // 73 --> 16096.5
 
 // Initialize bits
 BitState bits[8] = {
-  {0, 0, 1, 2, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, &filterBand1, &mixerMarker1, &toneMarker1},
-  {0, 1, 0, 3, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, &filterBand2, &mixerMarker2, &toneMarker2},
-  {0, 2, 24, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 4.0, &filterBand3, &mixerMarker3, &toneMarker3},
-  {0, 3, 26, 16, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, &filterBand4, &mixerMarker4, &toneMarker4},
-  {0, 4, 14, 18, (STARTING_MULTIPLE + 4) * FREQUENCY_MULTIPLES, 6.0, &filterBand5, &mixerMarker5, &toneMarker5},
-  {0, 5, 17, 22, (STARTING_MULTIPLE + 5) * FREQUENCY_MULTIPLES, 6.0, &filterBand6, &mixerMarker6, &toneMarker6},
-  {0, 6, 16, 23, (STARTING_MULTIPLE + 6) * FREQUENCY_MULTIPLES, 6.0, &filterBand7, &mixerMarker7, &toneMarker7},
-  {0, 7, 22, 24, (STARTING_MULTIPLE + 7) * FREQUENCY_MULTIPLES, 6.0, &filterBand8, &mixerMarker8, &toneMarker8}
+  {0, 0, 1, 2, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, &filterBand1, &mixerMarker1, &toneMarker1, 0, 0},
+  {0, 1, 0, 3, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, &filterBand2, &mixerMarker2, &toneMarker2, 0, 0},
+  {0, 2, 24, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 4.0, &filterBand3, &mixerMarker3, &toneMarker3, 0, 0},
+  {0, 3, 26, 16, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, &filterBand4, &mixerMarker4, &toneMarker4, 0, 0},
+  {0, 4, 14, 18, (STARTING_MULTIPLE + 4) * FREQUENCY_MULTIPLES, 6.0, &filterBand5, &mixerMarker5, &toneMarker5, 0, 0},
+  {0, 5, 17, 22, (STARTING_MULTIPLE + 5) * FREQUENCY_MULTIPLES, 6.0, &filterBand6, &mixerMarker6, &toneMarker6, 0, 0},
+  {0, 6, 16, 23, (STARTING_MULTIPLE + 6) * FREQUENCY_MULTIPLES, 6.0, &filterBand7, &mixerMarker7, &toneMarker7, 0, 0},
+  {0, 7, 22, 24, (STARTING_MULTIPLE + 7) * FREQUENCY_MULTIPLES, 6.0, &filterBand8, &mixerMarker8, &toneMarker8, 0, 0}
 };
 
 // Declare led strip
@@ -122,7 +126,20 @@ elapsedMillis msecs;
 const float AMPLITUDE_THRESHOLD = 0.5;  // Maximum value is correlated with the volume percentage of the connected pc
 const float FILTER_FREQ = 14000.0;
 const float DETECTION_THRESHOLD = 0.5;
+const unsigned int DEBOUNCE_DELAY = 100;
+const unsigned int TONE_DETECTION_DURATION = 250;
+// const unsigned int RESET_DELAY = 250;
 
+float mixerLeftGain = 0.5;
+float mixerRightGain = 0.5;
+float mixerMarkerGain = 2.0;
+
+float lowpassQualityLeft1 = 1.0;
+float lowpassQualityLeft2 = 1.0;
+float lowpassQualityRight1 = 1.0;
+float lowpassQualityRight2 = 1.0;
+float highpassQuality = 10.0;
+float bandFilterQuality = 10.0;
 
 void setup(){
   // Start serial connection for debugging
@@ -139,19 +156,19 @@ void setup(){
   SPI.setSCK(SDCARD_SCK_PIN);
 
   // Initialize lowpass filters
-  filterLeft.setLowpass(0, FILTER_FREQ, 1.0);
-  filterRight.setLowpass(0, FILTER_FREQ, 1.0);
+  filterLeft.setLowpass(0, FILTER_FREQ, lowpassQualityLeft1);
+  filterRight.setLowpass(0, FILTER_FREQ, lowpassQualityRight1);
 
-  filterLeft.setLowpass(1, FILTER_FREQ, 1.0);
-  filterRight.setLowpass(1, FILTER_FREQ, 1.0);
+  filterLeft.setLowpass(1, FILTER_FREQ, lowpassQualityLeft2);
+  filterRight.setLowpass(1, FILTER_FREQ, lowpassQualityRight2);
 
   // Initialize highpass filter
-  filterMarker.setHighpass(0, FILTER_FREQ, 10); // Leave at Q = 10
+  filterMarker.setHighpass(0, FILTER_FREQ, highpassQuality);
 
   // Set gains
-  mixerLeft.gain(0, 0.5);  // lowpass
-  mixerRight.gain(0, 0.5);  // lowpass
-  mixerMarker.gain(0, 2.0);  // highpass
+  mixerLeft.gain(0, mixerLeftGain);  // lowpass
+  mixerRight.gain(0, mixerRightGain);  // lowpass
+  mixerMarker.gain(0, mixerMarkerGain);  // highpass
 
   // Initialize led strip
   FastLED.addLeds<STRIPS, WS2812, DATA_PIN, GRB>(leds, N_LEDS);
@@ -161,34 +178,89 @@ void setup(){
   // Initialize marker pins and corresponding frequency filters
   for(int idx = 0; idx < 8; idx++){
     pinMode(bits[idx].pinNr, OUTPUT);
-    bits[idx].band_filter->setBandpass(0, bits[idx].frequency, 10.0);
-    bits[idx].band_filter->setLowpass(1, bits[idx].frequency - (0.5 * FREQUENCY_MULTIPLES), 10.0);
-    bits[idx].band_filter->setHighpass(2, bits[idx].frequency + (0.5 * FREQUENCY_MULTIPLES), 10.0);
+    bits[idx].band_filter->setBandpass(0, bits[idx].frequency, bandFilterQuality);
     bits[idx].amplifier->gain(0, bits[idx].gain);
     bits[idx].freq_filter->frequency(bits[idx].frequency, GOERTZEL_CYCLES);  // 200 cycles = 4.5 ms window length
   }
 }
 
-void loop(){
-  if(msecs > 50){
-    if(peakMarker.available() && peakMarker.read() > AMPLITUDE_THRESHOLD){
-      msecs = 0;
-      for(int idx = 0; idx < 8; idx++){
-        bits[idx].state = bits[idx].freq_filter->read() > DETECTION_THRESHOLD;
-        GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
-        Serial.print(idx);
-        Serial.print(" - ");
-        Serial.println(bits[idx].freq_filter->read());
+// TODO: Debouncing
+
+void processCommand(){
+
+  String command = Serial.readStringUntil('\n');
+  char current;
+  String val;
+  unsigned int prev = 0;
+  unsigned int cnt = 0;
+  for(unsigned int i = 0; i < command.length(); i++){
+    current = command.charAt(i);
+    if (current == ' '){
+      val = command.substring(prev, i);
+      prev = i+1;
+      bits[cnt].frequency = val.toFloat();
+      cnt++;
+    }
+  }
+  val = command.substring(prev, command.length());
+  bits[cnt].frequency = val.toFloat();
+
+  command = Serial.readStringUntil('\n');
+  prev = 0;
+  cnt = 0;
+  for(unsigned int i = 0; i < command.length(); i++){
+    current = command.charAt(i);
+    if (current == ' '){
+      // Serial.println(command.substring(prev, i));
+      val = command.substring(prev, i);
+      prev = i+1;
+      if(cnt == 0){
+        mixerMarker.gain(0, val.toFloat());
+        cnt++;
+      } else if (cnt == 1){
+        filterMarker.setHighpass(0, FILTER_FREQ, val.toFloat());
+        cnt++;
+      } else if (cnt == 2){
+          for(int idx = 0; idx < 8; idx++){
+            bits[idx].band_filter->setBandpass(0, bits[idx].frequency, val.toFloat());
+          }
       }
     }
   }
-  if(msecs > 200){
+  val = command.substring(prev, command.length());
+  for(int idx = 0; idx < 8; idx++){
+    bits[idx].freq_filter->frequency(bits[idx].frequency, val.toFloat());  // 200 cycles = 4.5 ms window length
+  }
+}
+
+void loop(){
+  if(msecs > 20){
+    if(peakMarker.available() && peakMarker.read() > AMPLITUDE_THRESHOLD){
+      msecs = 0;
+      for(int idx = 0; idx < 8; idx++){
+        bool new_state = bits[idx].freq_filter->read() > DETECTION_THRESHOLD;
+        if(new_state != bits[idx].last_state){
+          bits[idx].last_state = new_state;
+          bits[idx].debounce_time = 0;
+        } else if (new_state == bits[idx].last_state && bits[idx].debounce_time > DEBOUNCE_DELAY){
+            if (bits[idx].debounce_time > TONE_DETECTION_DURATION){
+              bits[idx].state = new_state;
+            }
+        }
+        GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
+        Serial.print(bits[idx].state);
+      }
+      Serial.println();
+    }
+  }
+  if(msecs > TONE_DETECTION_DURATION){
     msecs = 0;
     for(int idx = 0; idx < 8; idx++){
       bits[idx].state = 0;
       GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
     }
   }
+
   for(int idx = 0; idx < 8; idx++){
     if(bits[idx].state){
       leds[idx] = CRGB::HotPink;
@@ -197,6 +269,10 @@ void loop(){
     }
   }
   FastLED.show();
+
+  if(Serial.available()){
+    processCommand();
+  }
 }
 
 /*
