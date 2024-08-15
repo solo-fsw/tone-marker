@@ -43,7 +43,10 @@ def create_sound(bits, freq_mapping, noise = 0.0, return_sound=False):
     gain = [None, 0.3, 0.3, 0.11, 0.07][len(bits)]  # TODO: Generalize for eight bits
     sine = 0
     for b in bits:
-        sine += makesine(freq_mapping[b], noise) * gain
+        sine += makesine(freq_mapping[b], 0.0) * gain
+        
+    if noise:
+        sine += np.random.normal(0, 1, math.ceil(SAMPLING_FREQUENCY * DURATION)) * noise
         
     if return_sound:
         return ipd.Audio(sine, rate=SAMPLING_FREQUENCY, normalize = False, autoplay=True)
@@ -129,7 +132,7 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
            
 #%%
 
-OUTFILE = os.path.abspath("../../data/noise_testing.txt")
+OUTFILE = os.path.abspath("../../data/noise_testing3.txt")
 
 if __name__ == "__main__":
     teensy = connect()
