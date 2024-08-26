@@ -14,7 +14,7 @@ from tqdm.notebook import tqdm
 import pandas as pd
 
 SAMPLING_FREQUENCY = 44100
-RANGE = [16000, 18000]
+RANGE = [16000, 18000]  # TODO: Try out different range?
 DURATION = .5
 
 #%%
@@ -26,8 +26,8 @@ def frequency_mapping(goertzel_cycles, n_bits=8):
         starting_multiple += 1
     
     freq_mapping = {b:(starting_multiple + b) * frequency_multiples for b in range(n_bits)}
-    print(f"Goertzel cycles: {goertzel_cycles}")
-    pp(freq_mapping)
+    # print(f"Goertzel cycles: {goertzel_cycles}")
+    # pp(freq_mapping)
     return freq_mapping
 
 def makesine(freq, noise=0.0):
@@ -40,7 +40,8 @@ def makesine(freq, noise=0.0):
     return y
 
 def create_sound(bits, freq_mapping, noise = 0.0, return_sound=False):
-    gain = [None, 0.3, 0.3, 0.11, 0.07][len(bits)]  # TODO: Generalize for eight bits
+    assert len(bits) <= 4   # TODO: Generalize for eight bits
+    gain = [None, 0.3, 0.3, 0.11, 0.07][len(bits)]
     sine = 0
     for b in bits:
         sine += makesine(freq_mapping[b], 0.0) * gain
@@ -106,7 +107,7 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
             fo.write(f"accuracy, noise, mixerMarkerGain, highpassQual, bandpassQual, goertzel, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
             fo.close()
         
-    print(f"Testing {len(cases)} cases in {n_tests} tests for {n_repetitions} repetitions.")
+    # print(f"Testing {len(cases)} cases in {n_tests} tests for {n_repetitions} repetitions.")
     
     for nr, case in enumerate(cases):
         mixerMarker = case[0]
@@ -132,7 +133,7 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
            
 #%%
 
-OUTFILE = os.path.abspath("../../data/noise_testing3.txt")
+OUTFILE = os.path.abspath("../../data/noise_testing4.txt")
 
 if __name__ == "__main__":
     teensy = connect()
@@ -145,10 +146,12 @@ if __name__ == "__main__":
         "goertzel": tuple([150])
     }
     
-    noise = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    # noise = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    noise = 0.0
+    durations = [1]
     
-    for n in noise:
-        tune_parameters(bits, tune_ranges, 10, teensy, n)
+    for DURATION in durations:
+        tune_parameters(bits, tune_ranges, 10, teensy, noise)
 
 #%%
 

@@ -110,7 +110,7 @@ float STARTING_MULTIPLE = 55.0;  // 55 --> 16170.0
 BitState bits[8] = {
   {0, 0, 1, 2, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, &filterBand1, &mixerMarker1, &toneMarker1, 0, 0},
   {0, 1, 0, 3, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, &filterBand2, &mixerMarker2, &toneMarker2, 0, 0},
-  {0, 2, 24, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 4.0, &filterBand3, &mixerMarker3, &toneMarker3, 0, 0},
+  {0, 2, 24, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, &filterBand3, &mixerMarker3, &toneMarker3, 0, 0},
   {0, 3, 26, 16, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, &filterBand4, &mixerMarker4, &toneMarker4, 0, 0},
   {0, 4, 14, 18, (STARTING_MULTIPLE + 4) * FREQUENCY_MULTIPLES, 6.0, &filterBand5, &mixerMarker5, &toneMarker5, 0, 0},
   {0, 5, 17, 22, (STARTING_MULTIPLE + 5) * FREQUENCY_MULTIPLES, 6.0, &filterBand6, &mixerMarker6, &toneMarker6, 0, 0},
@@ -126,8 +126,8 @@ elapsedMillis msecs;
 const float AMPLITUDE_THRESHOLD = 0.5;  // Maximum value is correlated with the volume percentage of the connected pc
 const float FILTER_FREQ = 14000.0;
 const float DETECTION_THRESHOLD = 0.5;
-const unsigned int DEBOUNCE_DELAY = 100;
-const unsigned int TONE_DETECTION_DURATION = 250;
+const unsigned int DEBOUNCE_DELAY = 300;
+const unsigned int TONE_DETECTION_DURATION = 600;
 // const unsigned int RESET_DELAY = 250;
 
 float mixerLeftGain = 0.5;
