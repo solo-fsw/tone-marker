@@ -8,8 +8,8 @@
 #define SDCARD_CS_PIN    10
 #define SDCARD_MOSI_PIN  11
 #define SDCARD_SCK_PIN   13
-#define DATA_PIN 11
-#define N_LEDS 8
+#define DATA_PIN 17
+#define N_LEDS 1
 #define STRIPS 1
 
 // const bool audioDebugging = true;
@@ -97,6 +97,7 @@ struct BitState {
   AudioAnalyzeToneDetect *freq_filter;
   bool last_state;
   elapsedMillis debounce_time;
+  float certainty;
 };
 
 // For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles:
@@ -105,18 +106,6 @@ float SAMPELING_FREQUENCY = 44100; // Hz
 float GOERTZEL_CYCLES = 150;
 float FREQUENCY_MULTIPLES = SAMPELING_FREQUENCY / GOERTZEL_CYCLES;
 float STARTING_MULTIPLE = 55.0;  // 55 --> 16170.0
-
-// Initialize bits
-BitState bits[8] = {
-  {0, 0, 1, 2, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, &filterBand1, &mixerMarker1, &toneMarker1, 0, 0},
-  {0, 1, 0, 3, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, &filterBand2, &mixerMarker2, &toneMarker2, 0, 0},
-  {0, 2, 24, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, &filterBand3, &mixerMarker3, &toneMarker3, 0, 0},
-  {0, 3, 26, 16, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, &filterBand4, &mixerMarker4, &toneMarker4, 0, 0},
-  {0, 4, 14, 18, (STARTING_MULTIPLE + 4) * FREQUENCY_MULTIPLES, 6.0, &filterBand5, &mixerMarker5, &toneMarker5, 0, 0},
-  {0, 5, 17, 22, (STARTING_MULTIPLE + 5) * FREQUENCY_MULTIPLES, 6.0, &filterBand6, &mixerMarker6, &toneMarker6, 0, 0},
-  {0, 6, 16, 23, (STARTING_MULTIPLE + 6) * FREQUENCY_MULTIPLES, 6.0, &filterBand7, &mixerMarker7, &toneMarker7, 0, 0},
-  {0, 7, 22, 24, (STARTING_MULTIPLE + 7) * FREQUENCY_MULTIPLES, 6.0, &filterBand8, &mixerMarker8, &toneMarker8, 0, 0}
-};
 
 // Declare led strip
 CRGB leds[N_LEDS * STRIPS];
@@ -128,7 +117,6 @@ const float FILTER_FREQ = 14000.0;
 const float DETECTION_THRESHOLD = 0.5;
 const unsigned int DEBOUNCE_DELAY = 300;
 const unsigned int TONE_DETECTION_DURATION = 600;
-// const unsigned int RESET_DELAY = 250;
 
 float mixerLeftGain = 0.5;
 float mixerRightGain = 0.5;
@@ -140,6 +128,20 @@ float lowpassQualityRight1 = 1.0;
 float lowpassQualityRight2 = 1.0;
 float highpassQuality = 8.0;
 float bandFilterQuality = 8.0;
+
+uint8_t virtualRegister = 0x00;
+
+// Initialize bits
+BitState bits[8] = {
+  {0, 0, 0, 2, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, &filterBand1, &mixerMarker1, &toneMarker1, 0, 0, DETECTION_THRESHOLD},
+  {0, 1, 1, 3, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, &filterBand2, &mixerMarker2, &toneMarker2, 0, 0, DETECTION_THRESHOLD},
+  {0, 2, 2, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, &filterBand3, &mixerMarker3, &toneMarker3, 0, 0, DETECTION_THRESHOLD},
+  {0, 3, 3, 16, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, &filterBand4, &mixerMarker4, &toneMarker4, 0, 0, DETECTION_THRESHOLD},
+  {0, 4, 4, 18, (STARTING_MULTIPLE + 4) * FREQUENCY_MULTIPLES, 6.0, &filterBand5, &mixerMarker5, &toneMarker5, 0, 0, DETECTION_THRESHOLD},
+  {0, 5, 5, 22, (STARTING_MULTIPLE + 5) * FREQUENCY_MULTIPLES, 6.0, &filterBand6, &mixerMarker6, &toneMarker6, 0, 0, DETECTION_THRESHOLD},
+  {0, 6, 6, 23, (STARTING_MULTIPLE + 6) * FREQUENCY_MULTIPLES, 6.0, &filterBand7, &mixerMarker7, &toneMarker7, 0, 0, DETECTION_THRESHOLD},
+  {0, 7, 9, 24, (STARTING_MULTIPLE + 7) * FREQUENCY_MULTIPLES, 6.0, &filterBand8, &mixerMarker8, &toneMarker8, 0, 0, DETECTION_THRESHOLD}
+};
 
 void setup(){
   // Start serial connection for debugging
@@ -171,9 +173,13 @@ void setup(){
   mixerMarker.gain(0, mixerMarkerGain);  // highpass
 
   // Initialize led strip
-  FastLED.addLeds<STRIPS, WS2812, DATA_PIN, GRB>(leds, N_LEDS);
+  FastLED.addLeds<STRIPS, WS2812B, DATA_PIN, GRB>(leds, N_LEDS);
   FastLED.setBrightness(40);
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, 1500);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 500);
+
+  FastLED.clear();
+  leds[0] = CRGB::DarkGreen;
+  FastLED.show();
 
   // Initialize marker pins and corresponding frequency filters
   for(int idx = 0; idx < 8; idx++){
@@ -184,9 +190,11 @@ void setup(){
   }
 }
 
-// TODO: Debouncing
-
 void processCommand(){
+
+  FastLED.clear();
+  leds[0] = CRGB::DarkRed;
+  FastLED.show();
 
   String command = Serial.readStringUntil('\n');
   char current;
@@ -231,6 +239,50 @@ void processCommand(){
   for(int idx = 0; idx < 8; idx++){
     bits[idx].freq_filter->frequency(bits[idx].frequency, val.toFloat());  // 200 cycles = 4.5 ms window length
   }
+
+  command = Serial.readStringUntil('\n');
+  prev = 0;
+  cnt = 0;
+  for(unsigned int i = 0; i < command.length(); i++){
+    current = command.charAt(i);
+    if (current == ' '){
+      val = command.substring(prev, i);
+      prev = i+1;
+      bits[cnt].gain = val.toFloat();
+      cnt++;
+      }
+    }
+  val = command.substring(prev, command.length());
+  bits[cnt].gain = val.toFloat();
+
+  for(int idx = 0; idx < 8; idx++){
+    bits[idx].amplifier->gain(0, bits[idx].gain);
+  }
+
+  command = Serial.readStringUntil('\n');
+  prev = 0;
+  cnt = 0;
+  for(unsigned int i = 0; i < command.length(); i++){
+    current = command.charAt(i);
+    if (current == ' '){
+      val = command.substring(prev, i);
+      prev = i+1;
+      bits[cnt].certainty = val.toFloat();
+      cnt++;
+      }
+    }
+  val = command.substring(prev, command.length());
+  bits[cnt].certainty = val.toFloat();
+
+  FastLED.clear();
+  leds[0] = CRGB::DarkGreen;
+  FastLED.show();
+}
+
+void setMarkerBits(uint8_t virtualRegister){
+  for(int idx = 0; idx < 8; idx++){
+    digitalWriteFast(bits[idx].pinNr, ((virtualRegister >> idx) & 0x01));
+  }
 }
 
 void loop(){
@@ -238,7 +290,7 @@ void loop(){
     if(peakMarker.available() && peakMarker.read() > AMPLITUDE_THRESHOLD){
       msecs = 0;
       for(int idx = 0; idx < 8; idx++){
-        bool new_state = bits[idx].freq_filter->read() > DETECTION_THRESHOLD;
+        bool new_state = bits[idx].freq_filter->read() > bits[idx].certainty;
         if(new_state != bits[idx].last_state){
           bits[idx].last_state = new_state;
           bits[idx].debounce_time = 0;
@@ -247,9 +299,11 @@ void loop(){
               bits[idx].state = new_state;
             }
         }
-        GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
+        virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
+        // GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
         Serial.print(bits[idx].state);
       }
+      setMarkerBits(virtualRegister);
       Serial.println();
     }
   }
@@ -257,18 +311,11 @@ void loop(){
     msecs = 0;
     for(int idx = 0; idx < 8; idx++){
       bits[idx].state = 0;
-      GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
+      virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
+      // GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
     }
+    setMarkerBits(virtualRegister);
   }
-
-  for(int idx = 0; idx < 8; idx++){
-    if(bits[idx].state){
-      leds[idx] = CRGB::HotPink;
-    } else {
-      leds[idx] = CRGB::Black;
-    }
-  }
-  FastLED.show();
 
   if(Serial.available()){
     processCommand();

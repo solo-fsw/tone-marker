@@ -14,7 +14,7 @@ from tqdm.notebook import tqdm
 import pandas as pd
 
 SAMPLING_FREQUENCY = 44100
-RANGE = [16000, 18000]  # TODO: Try out different range?
+RANGE = [16000, 18000]
 DURATION = .5
 
 #%%
@@ -26,8 +26,6 @@ def frequency_mapping(goertzel_cycles, n_bits=8):
         starting_multiple += 1
     
     freq_mapping = {b:(starting_multiple + b) * frequency_multiples for b in range(n_bits)}
-    # print(f"Goertzel cycles: {goertzel_cycles}")
-    # pp(freq_mapping)
     return freq_mapping
 
 def makesine(freq, noise=0.0):
@@ -104,22 +102,26 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
     
     if not os.path.exists(OUTFILE):
         with open(OUTFILE, 'w') as fo:
-            fo.write(f"accuracy, noise, mixerMarkerGain, highpassQual, bandpassQual, goertzel, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
+            fo.write(f"accuracy, noise, gain0, gain1, gain2, gain3, gain4, gain5, gain6, gain7, thresh0, thresh1, thresh2, thresh3, thresh4, thresh5, thresh6, thresh7, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
             fo.close()
-        
-    # print(f"Testing {len(cases)} cases in {n_tests} tests for {n_repetitions} repetitions.")
-    
+            
     for nr, case in enumerate(cases):
         mixerMarker = case[0]
         high = case[1]
         band = case[2]
         goertzel = case[3]
+        gains = case[4]
+        certainties = case[5]
         
         freq_map = frequency_mapping(goertzel)
         
         device.write(f"{' '.join(map(str, freq_map.values()))}\n".encode())
         sleep(.1)
         device.write(f"{mixerMarker} {high} {band} {goertzel}\n".encode())
+        sleep(.1)
+        device.write(f"{' '.join(map(str, gains))}\n".encode())
+        sleep(.1)
+        device.write(f"{' '.join(map(str, certainties))}\n".encode())
         sleep(.1)
         
         accuracy = np.zeros(n_tests)
@@ -129,31 +131,36 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
             
         accuracy /= n_repetitions
         with open(OUTFILE, 'a') as fo:
-            fo.write(f"{np.sum(accuracy) / n_tests}, {noise}, {mixerMarker}, {high}, {band}, {goertzel}, {', '.join(map(str, accuracy))}\n")
+            fo.write(f"{np.sum(accuracy) / n_tests}, {noise}, {', '.join(map(str, gains))}, {', '.join(map(str, certainties))}, {', '.join(map(str, accuracy))}\n")
            
 #%%
-
-OUTFILE = os.path.abspath("../../data/noise_testing4.txt")
+OUTFILE = os.path.abspath("../../data/favourite-tuning.txt")
 
 if __name__ == "__main__":
     teensy = connect()
     n_bits = 4
     bits = list(range(n_bits))
+    
+    # Don't tune the last 4 bits in order to reduce tuning time
     tune_ranges = {
         "mixerMarker" : tuple([2.4]),
         "high": tuple([8.0]),
         "band": tuple([8.0]),
-        "goertzel": tuple([150])
-    }
+        "goertzel": tuple([150]),
+        "gains": tuple([[4, 4, 6, 6, 6, 6, 6, 6], [4, 4, 4, 4, 4, 4, 4, 4], [6, 6, 6, 6, 6, 6, 6, 6]]),
+        "certainties": tuple([[.5, .5, .5, .5, .5, .5, .5, .5], [.4, .4, .4, .4, .5, .5, .5, .5], [.8, .8, .8, .8, .8, .8, .8, .8]])
+    }    
     
-    # noise = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
     noise = 0.0
     durations = [1]
     
     for DURATION in durations:
-        tune_parameters(bits, tune_ranges, 10, teensy, noise)
+        tune_parameters(bits, tune_ranges, 200, teensy, noise)
 
 #%%
 
 df = pd.read_csv(OUTFILE)
 df.round(3)
+
+#%%
+df[df['accuracy'] == np.max(df.accuracy)]
