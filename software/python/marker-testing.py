@@ -1,4 +1,8 @@
-#%%
+"""
+Python script for testing marker functionality. Also used to test performance of a predefined set of audio/filter parameters.
+"""
+
+# Imports
 import serial
 import re
 from serial.tools.list_ports import comports
@@ -13,12 +17,22 @@ from pprint import pp
 from tqdm.notebook import tqdm
 import pandas as pd
 
+# Constants
 SAMPLING_FREQUENCY = 44100
 RANGE = [16000, 18000]
 DURATION = .5
 
-#%%
+# Helper functions
 def frequency_mapping(goertzel_cycles, n_bits=8):
+    """Maps frequencies to bits given a specific amount of goertzel cycles by using [the formula explained by Kevin Banks](https://courses.cs.washington.edu/courses/cse466/11au/resources/GoertzelAlgorithmEETimes.pdf).
+
+    Args:
+        goertzel_cycles (int): The amount of cycles the goertzel algorithm will take in order to create an estimation.
+        n_bits (int, optional): The amount of mappings that need to be made between bits and frequencies in the desired range. Defaults to 8.
+
+    Returns:
+        dict: A dictionary containing bit - frequency mappings.
+    """
     frequency_multiples = SAMPLING_FREQUENCY / goertzel_cycles
     starting_multiple = 0
     
@@ -29,6 +43,15 @@ def frequency_mapping(goertzel_cycles, n_bits=8):
     return freq_mapping
 
 def makesine(freq, noise=0.0):
+    """Generates sinewave values for a defined frequency.
+
+    Args:
+        freq (int): The sinewave's frequency
+        noise (float, optional): The percentage of white noise in the signal. In the range of 0.0 up to 1.0. Defaults to 0.0.
+
+    Returns:
+        numpy.array: A numpy array containing sinewave values for the desired signal length.
+    """
     t = np.linspace(0, DURATION, math.ceil(SAMPLING_FREQUENCY * DURATION))
     y = np.sin(2 * np.pi * freq * t)
     if noise:
@@ -38,6 +61,17 @@ def makesine(freq, noise=0.0):
     return y
 
 def create_sound(bits, freq_mapping, noise = 0.0, return_sound=False):
+    """Combines sinewaves for different bits in order to create a single marker sound.
+
+    Args:
+        bits (list[int]): A list containing the bits that need to be combined into a single marker sound.
+        freq_mapping (dict): A mapping between bits and frequencies.
+        noise (float, optional): The percentage of white noise in the signal. In the range of 0.0 up to 1.0. Defaults to 0.0.
+        return_sound (bool, optional): Flag defining if sinevalues or a playable sound widget should be returned. Defaults to False (sinewave).
+
+    Returns:
+        np.array: Array containing values for the combined sinewaves.
+    """
     assert len(bits) <= 4   # TODO: Generalize for eight bits
     gain = [None, 0.3, 0.3, 0.11, 0.07][len(bits)]
     sine = 0
@@ -53,6 +87,11 @@ def create_sound(bits, freq_mapping, noise = 0.0, return_sound=False):
         return sine
     
 def connect():
+    """Creates a serial connection to the (prototype) tonemarker device.
+
+    Returns:
+        serial.Serial: A serial class for the tonemarker device.
+    """
     ser = serial.Serial()
     connected = False
     for port, desc, hwid in comports():
@@ -134,7 +173,7 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
             fo.write(f"{np.sum(accuracy) / n_tests}, {noise}, {', '.join(map(str, gains))}, {', '.join(map(str, certainties))}, {', '.join(map(str, accuracy))}\n")
            
 #%%
-OUTFILE = os.path.abspath("../../data/favourite-tuning.txt")
+OUTFILE = os.path.abspath("../../data/favourite-tuning2.txt")
 
 if __name__ == "__main__":
     teensy = connect()
@@ -147,15 +186,15 @@ if __name__ == "__main__":
         "high": tuple([8.0]),
         "band": tuple([8.0]),
         "goertzel": tuple([150]),
-        "gains": tuple([[4, 4, 6, 6, 6, 6, 6, 6], [4, 4, 4, 4, 4, 4, 4, 4], [6, 6, 6, 6, 6, 6, 6, 6]]),
-        "certainties": tuple([[.5, .5, .5, .5, .5, .5, .5, .5], [.4, .4, .4, .4, .5, .5, .5, .5], [.8, .8, .8, .8, .8, .8, .8, .8]])
+        "gains": tuple([[4, 4, 6, 6, 6, 6, 6, 6], [6, 6, 6, 6, 6, 6, 6, 6]]),
+        "certainties": tuple([[.5, .5, .5, .5, .5, .5, .5, .5]])
     }    
     
     noise = 0.0
     durations = [1]
     
     for DURATION in durations:
-        tune_parameters(bits, tune_ranges, 200, teensy, noise)
+        tune_parameters(bits, tune_ranges, 500, teensy, noise)
 
 #%%
 

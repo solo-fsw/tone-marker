@@ -5,16 +5,11 @@
 #include <SerialFlash.h>
 #include <FastLED.h>
 
-#define SDCARD_CS_PIN    10
-#define SDCARD_MOSI_PIN  11
-#define SDCARD_SCK_PIN   13
 #define DATA_PIN 17
 #define N_LEDS 1
 #define STRIPS 1
 
-// const bool audioDebugging = true;
-
-// GUItool: begin automatically generated code
+// Begin automatically generated code
 AudioInputI2S            i2s1;           //xy=101,321
 AudioFilterBiquad        filterMarker;   //xy=346,417
 AudioMixer4              mixerLeft;      //xy=348,268
@@ -82,14 +77,14 @@ AudioConnection          patchCord31(mixerMarker6, toneMarker6);
 AudioConnection          patchCord32(mixerMarker7, toneMarker7);
 AudioConnection          patchCord33(mixerMarker8, toneMarker8);
 AudioControlSGTL5000     sgtl5000_1;     //xy=827,182
-// GUItool: end automatically generated code
+// End automatically generated code
 
-// Register GPIO6
+// Define structure for managing bits
 struct BitState {
   bool state;
   int bitIdx;
   int pinNr;
-  int registerIdx;
+  int registerIdx;  // Used to directly set the pins in register GPIO6. Deprecated with the new pin numbers.
   float frequency;
   float gain;
   AudioFilterBiquad *band_filter;
@@ -100,21 +95,20 @@ struct BitState {
   float certainty;
 };
 
-// For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles:
-// https://courses.cs.washington.edu/courses/cse466/11au/resources/GoertzelAlgorithmEETimes.pdf
+// For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles
 float SAMPELING_FREQUENCY = 44100; // Hz
 float GOERTZEL_CYCLES = 150;
 float FREQUENCY_MULTIPLES = SAMPELING_FREQUENCY / GOERTZEL_CYCLES;
 float STARTING_MULTIPLE = 55.0;  // 55 --> 16170.0
 
-// Declare led strip
+// Initialize led strip (status led)
 CRGB leds[N_LEDS * STRIPS];
 
 // Declare global variables and constants
 elapsedMillis msecs;
-const float AMPLITUDE_THRESHOLD = 0.5;  // Maximum value is correlated with the volume percentage of the connected pc
-const float FILTER_FREQ = 14000.0;
+const float AMPLITUDE_THRESHOLD = 0.5;
 const float DETECTION_THRESHOLD = 0.5;
+const float FILTER_FREQ = 14000.0;
 const unsigned int DEBOUNCE_DELAY = 300;
 const unsigned int TONE_DETECTION_DURATION = 600;
 
@@ -144,7 +138,7 @@ BitState bits[8] = {
 };
 
 void setup(){
-  // Start serial connection for debugging
+  // Start serial connection
   Serial.begin(9600);
 
   // Initialize audio buffer and start main audio controller
@@ -152,10 +146,6 @@ void setup(){
   sgtl5000_1.enable();
   sgtl5000_1.volume(0.5);
   sgtl5000_1.inputSelect(AUDIO_INPUT_LINEIN);
-
-  // Set SD card variables
-  SPI.setMOSI(SDCARD_MOSI_PIN);
-  SPI.setSCK(SDCARD_SCK_PIN);
 
   // Initialize lowpass filters
   filterLeft.setLowpass(0, FILTER_FREQ, lowpassQualityLeft1);
@@ -172,11 +162,12 @@ void setup(){
   mixerRight.gain(0, mixerRightGain);  // lowpass
   mixerMarker.gain(0, mixerMarkerGain);  // highpass
 
-  // Initialize led strip
+  // Initialize led strip (status led)
   FastLED.addLeds<STRIPS, WS2812B, DATA_PIN, GRB>(leds, N_LEDS);
   FastLED.setBrightness(40);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 500);
 
+  // Set status led to green
   FastLED.clear();
   leds[0] = CRGB::DarkGreen;
   FastLED.show();
@@ -186,12 +177,12 @@ void setup(){
     pinMode(bits[idx].pinNr, OUTPUT);
     bits[idx].band_filter->setBandpass(0, bits[idx].frequency, bandFilterQuality);
     bits[idx].amplifier->gain(0, bits[idx].gain);
-    bits[idx].freq_filter->frequency(bits[idx].frequency, GOERTZEL_CYCLES);  // 200 cycles = 4.5 ms window length
+    bits[idx].freq_filter->frequency(bits[idx].frequency, GOERTZEL_CYCLES);
   }
-}
+};
 
 void processCommand(){
-
+  // Function for processing serial commands used during parameter tuning.
   FastLED.clear();
   leds[0] = CRGB::DarkRed;
   FastLED.show();
@@ -277,13 +268,15 @@ void processCommand(){
   FastLED.clear();
   leds[0] = CRGB::DarkGreen;
   FastLED.show();
-}
+};
 
+// Sets marker bits according to the status information in the (virtual) register
 void setMarkerBits(uint8_t virtualRegister){
   for(int idx = 0; idx < 8; idx++){
     digitalWriteFast(bits[idx].pinNr, ((virtualRegister >> idx) & 0x01));
   }
-}
+  // GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
+};
 
 void loop(){
   if(msecs > 20){
@@ -300,7 +293,6 @@ void loop(){
             }
         }
         virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
-        // GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
         Serial.print(bits[idx].state);
       }
       setMarkerBits(virtualRegister);
@@ -312,7 +304,6 @@ void loop(){
     for(int idx = 0; idx < 8; idx++){
       bits[idx].state = 0;
       virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
-      // GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
     }
     setMarkerBits(virtualRegister);
   }
@@ -320,16 +311,4 @@ void loop(){
   if(Serial.available()){
     processCommand();
   }
-}
-
-/*
-Usefull links:
-https://forum.pjrc.com/index.php?threads/available-teensy-4-0-pins-when-audio-shield-d-attached.58331/
-https://github.com/luni64/TeensyTimerTool/wiki/Avoid-PWM-timer-clashes
-https://forum.pjrc.com/index.php?threads/teensy-4-1-digital-i-o-pin-map.64226/
-https://forum.pjrc.com/index.php?threads/tutorial-on-digital-i-o-atmega-pin-port-ddr-d-b-registers-vs-arm-gpio_pdir-_pdor.17532/
-https://forum.pjrc.com/index.php?threads/speed-of-digitalread-and-digitalwrite-with-teensy3-0.24573/
-https://forum.pjrc.com/index.php?threads/unclear-on-how-to-use-ddrx-and-portx-teensy-3-2.53950/
-https://arduino.stackexchange.com/questions/72440/what-is-the-equivilent-of-portx-for-teensy-4-0
-https://courses.cs.washington.edu/courses/cse466/11au/resources/GoertzelAlgorithmEETimes.pdf
-*/
+};
