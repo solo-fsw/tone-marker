@@ -99,7 +99,7 @@ struct BitState {
 float SAMPELING_FREQUENCY = 44100; // Hz
 float GOERTZEL_CYCLES = 150;
 float FREQUENCY_MULTIPLES = SAMPELING_FREQUENCY / GOERTZEL_CYCLES;
-float STARTING_MULTIPLE = 55.0;  // 55 --> 16170.0
+float STARTING_MULTIPLE = 52.0;  // 52 --> 15288.0
 
 // Initialize led strip (status led)
 CRGB leds[N_LEDS * STRIPS];
@@ -167,9 +167,9 @@ void setup(){
   FastLED.setBrightness(40);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, 500);
 
-  // Set status led to green
+  // Set status led to pink
   FastLED.clear();
-  leds[0] = CRGB::DarkGreen;
+  leds[0] = CRGB::HotPink;
   FastLED.show();
 
   // Initialize marker pins and corresponding frequency filters
@@ -266,7 +266,7 @@ void processCommand(){
   bits[cnt].certainty = val.toFloat();
 
   FastLED.clear();
-  leds[0] = CRGB::DarkGreen;
+  leds[0] = CRGB::HotPink;
   FastLED.show();
 };
 

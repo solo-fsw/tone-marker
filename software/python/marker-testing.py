@@ -1,8 +1,9 @@
 """
 Python script for testing marker functionality. Also used to test performance of a predefined set of audio/filter parameters.
 """
-
+#%%
 # Imports
+import pydub.playback
 import serial
 import re
 from serial.tools.list_ports import comports
@@ -13,14 +14,15 @@ import sounddevice as sd
 from itertools import combinations, chain, product
 import IPython.display as ipd
 import os
-from pprint import pp
 from tqdm.notebook import tqdm
 import pandas as pd
+import soundfile as sf
+import pydub
 
 # Constants
 SAMPLING_FREQUENCY = 44100
 RANGE = [16000, 18000]
-DURATION = .5
+DURATION = 1
 
 # Helper functions
 def frequency_mapping(goertzel_cycles, n_bits=8):
@@ -112,9 +114,32 @@ def connect():
     elif connected and ser.is_open:
         return ser
     
-def collect_response(sound, device):
-    sd.play(sound, SAMPLING_FREQUENCY)
-    sd.wait()
+def collect_response(sound, device, mp3=False):
+    """Plays a sound and then collects a response from the serial device.
+
+    Args:
+        sound (numpy.array): A numpy array with sine wave values.
+        device (serial.Serial): Serial class for the tonemarker device.
+        mp3 (bool, optional): Flag describing if the sound should be converted to mp3 before it is played. Defaults to False.
+
+    Returns:
+        numpy.array: A numpy array containing all unique responses from the serial device.
+    """
+    if not mp3:
+        sd.play(sound, SAMPLING_FREQUENCY)
+        sd.wait()
+        
+    else:
+        sf.write("./tmp.wav", sound, SAMPLING_FREQUENCY)
+        segment = pydub.AudioSegment.from_wav("./tmp.wav")
+        segment = segment - 2
+        segment.export("./tmp.mp3", format='mp3')
+        sounds = pydub.AudioSegment.from_mp3("./tmp.mp3")
+        pydub.playback.play(sounds)
+        sleep(1)
+        os.remove("./tmp.wav")
+        os.remove("./tmp.mp3")
+        
     response = list()
     while device.in_waiting:
         sleep(.1)
@@ -123,19 +148,40 @@ def collect_response(sound, device):
     device.flush()
     return np.unique(response)
 
-def test_markers(bits, freq_mapping, device, noise = 0.0):
+def test_markers(bits, freq_mapping, device, noise = 0.0, mp3=False):
+    """Tests responses for all possible combinations of the specified bits and returns an array with the accuracy of each combination.
+
+    Args:
+        bits (list[int]): List with each bit that is to be tested.
+        freq_mapping (dict): Mapping between bits and frequencies.
+        device (serial.Serial): Serial class for the tonemarker device.
+        noise (float, optional): Percentage of white noise in the signal. Ranges between 0.0 and 1.0. Defaults to 0.0.
+        mp3 (bool, optional): Flag describing if the sound should be converted to mp3 before it is played. Defaults to False.
+
+    Returns:
+        numpy.array: Numpy array with accuracies where each index corresponds to a specific combination of bits.
+    """
     counter = np.zeros(2**len(bits) - 1)
     device.flush()
     for idx, p in enumerate(chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1))):
             correct = ''.join('1' if i in p else '0' for i in range(8))
             sound = create_sound(p, freq_mapping, noise)
-            response = collect_response(sound, device)
+            response = collect_response(sound, device, mp3)
             if len(response) == 2 and response[-1] == correct:
                 counter[idx] += 1
                 
     return counter
 
 def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
+    """Tests the performance of provided device parameters for a specified amount of repetitions.
+
+    Args:
+        bits (list[int]): The bits that need to be tested.
+        tune_ranges (dict): Dictionary containing parameter values over which tests need to be performed.
+        n_repetitions (int): Amount of repetitions for each parameter combination.
+        device (serial.Serial): Serial class for the tonemarker device.
+        noise (float, optional): Percentage of white noise in the signal. Ranges between 0.0 and 1.0. Defaults to 0.0.
+    """
     cases = list(product(*tuple(tune_ranges.values())))
     n_tests = 2**len(bits) - 1
     
@@ -171,14 +217,56 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
         accuracy /= n_repetitions
         with open(OUTFILE, 'a') as fo:
             fo.write(f"{np.sum(accuracy) / n_tests}, {noise}, {', '.join(map(str, gains))}, {', '.join(map(str, certainties))}, {', '.join(map(str, accuracy))}\n")
+            
+def test_compression(bits, params, n_repetitions, device) -> None:
+    """Test parameter performance on markers from a compressed file format (mp3).
+
+    Args:
+        bits (list[int]): The bits that need to be tested.
+        params (dict): Dictionary containing parameter values over which tests need to be performed.
+        n_repetitions (int): Amount of repetitions for each parameter combination.
+        device (serial.Serial): Serial class for the tonemarker device.
+    """
+    if not os.path.exists(OUTFILE):
+        with open(OUTFILE, 'w') as fo:
+            fo.write(f"accuracy, repetitions, lower range, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
+            fo.close()
+            
+    mixerMarker = params["mixerMarker"]
+    high = params["high"]
+    band = params["band"]
+    goertzel = params["goertzel"]
+    gains = params["gains"]
+    certainties = params["certainties"]
+    
+    freq_map = frequency_mapping(goertzel)
+    
+    device.write(f"{' '.join(map(str, freq_map.values()))}\n".encode())
+    sleep(.1)
+    device.write(f"{mixerMarker} {high} {band} {goertzel}\n".encode())
+    sleep(.1)
+    device.write(f"{' '.join(map(str, gains))}\n".encode())
+    sleep(.1)
+    device.write(f"{' '.join(map(str, certainties))}\n".encode())
+    sleep(.1)
+    
+    n_tests = 2**len(bits) - 1
+    accuracy = np.zeros(n_tests)
+    for _ in tqdm(range(n_repetitions), desc = "Mp3 testing"):
+        results = test_markers(bits, freq_map, device, noise, mp3=True)
+        accuracy += results
+        
+    accuracy /= n_repetitions
+    with open(OUTFILE, 'a') as fo:
+        fo.write(f"{np.sum(accuracy) / n_tests}, {n_repetitions}, {RANGE[0]}, {', '.join(map(str, accuracy))}\n")
            
 #%%
-OUTFILE = os.path.abspath("../../data/favourite-tuning2.txt")
-
 if __name__ == "__main__":
+    OUTFILE = os.path.abspath("../../data/attenuation-reliability-test.txt")
     teensy = connect()
     n_bits = 4
     bits = list(range(n_bits))
+    noise = 0.0
     
     # Don't tune the last 4 bits in order to reduce tuning time
     tune_ranges = {
@@ -188,18 +276,24 @@ if __name__ == "__main__":
         "goertzel": tuple([150]),
         "gains": tuple([[4, 4, 6, 6, 6, 6, 6, 6], [6, 6, 6, 6, 6, 6, 6, 6]]),
         "certainties": tuple([[.5, .5, .5, .5, .5, .5, .5, .5]])
-    }    
+    }
     
-    noise = 0.0
-    durations = [1]
+    params = {
+        "mixerMarker" : 2.4,
+        "high": 8.0,
+        "band": 8.0,
+        "goertzel": 150,
+        "gains": [4, 4, 6, 6, 6, 6, 6, 6],
+        "certainties": [.5, .5, .5, .5, .5, .5, .5, .5]
+    }
     
-    for DURATION in durations:
-        tune_parameters(bits, tune_ranges, 500, teensy, noise)
+    for lower_range in [15000]:
+        RANGE = [lower_range, 18000]
+        
+        # tune_parameters(bits, tune_ranges, 10, teensy, noise)
+        test_compression(bits, params, 100, teensy)
 
 #%%
 
 df = pd.read_csv(OUTFILE)
 df.round(3)
-
-#%%
-df[df['accuracy'] == np.max(df.accuracy)]
