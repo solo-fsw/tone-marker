@@ -79,8 +79,8 @@ if __name__ == "__main__":
         
         segment = pydub.AudioSegment.from_wav(f"{os.path.join(OUTDIR, marker_value)}.wav")
         
-        quieter_segment = segment - 10
-        mp3_segment = segment - 5
+        quieter_segment = segment - 6
+        mp3_segment = segment - 2
         
         quieter_segment.export(f"{os.path.join(OUTDIR, marker_value)}.wav", format='wav')
         mp3_segment.export(f"{os.path.join(OUTDIR, marker_value)}.mp3", format='mp3')
