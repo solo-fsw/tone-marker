@@ -21,7 +21,7 @@ import pydub
 
 # Constants
 SAMPLING_FREQUENCY = 44100
-RANGE = [16000, 18000]
+RANGE = [15000, 18000]
 DURATION = 1
 
 # Helper functions

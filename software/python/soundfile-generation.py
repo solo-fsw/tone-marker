@@ -8,7 +8,7 @@ import soundfile as sf
 import pydub
 
 SAMPLING_FREQUENCY = 44100
-RANGE = [16000, 18000]
+RANGE = [15000, 18000]
 DURATION = 1
 GOERTZEL = 150
 
@@ -54,9 +54,10 @@ def add_ramps(sine, duration=100):
 def create_sounds(bits, freq_mapping):
     sounds = dict()
     for idx, p in enumerate(chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1))):
-        bitstring = ''.join('1' if i in p else '0' for i in range(8))
+        bitstring = ''.join('1' if i in p else '0' for i in range(8))[::-1]
         sound = create_sound(p, freq_mapping)
-        sounds[str(idx + 1)] = sound
+        sounds[str(int(bitstring, 2))] = sound
+        print(bitstring, str(int(bitstring, 2)))
         
     return sounds
 
@@ -78,8 +79,10 @@ if __name__ == "__main__":
         
         segment = pydub.AudioSegment.from_wav(f"{os.path.join(OUTDIR, marker_value)}.wav")
         
-        # https://stackoverflow.com/questions/43679631/python-how-to-change-audio-volume
         quieter_segment = segment - 10
+        mp3_segment = segment - 5
         
         quieter_segment.export(f"{os.path.join(OUTDIR, marker_value)}.wav", format='wav')
+        mp3_segment.export(f"{os.path.join(OUTDIR, marker_value)}.mp3", format='mp3')
+
         
