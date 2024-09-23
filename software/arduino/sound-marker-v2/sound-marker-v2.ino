@@ -293,19 +293,21 @@ void loop(){
             }
         }
         virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
-        Serial.print(bits[idx].state);
+        // Serial.print(bits[idx].state);
       }
-      setMarkerBits(virtualRegister);
-      Serial.println();
+      // setMarkerBits(virtualRegister);
+      // Serial.println();
     }
   }
   if(msecs > TONE_DETECTION_DURATION){
     msecs = 0;
     for(int idx = 0; idx < 8; idx++){
-      bits[idx].state = 0;
       virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
+      Serial.print(bits[idx].state);
+      bits[idx].state = 0;
     }
     setMarkerBits(virtualRegister);
+    Serial.println();
   }
 
   if(Serial.available()){
