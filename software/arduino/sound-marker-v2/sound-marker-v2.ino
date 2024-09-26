@@ -8,8 +8,8 @@
 #define DATA_PIN 17
 #define N_LEDS 1
 #define STRIPS 1
-#define N_BITS 4
-#define N_UNUSED_BITS 4
+#define N_BITS 3
+#define N_UNUSED_BITS 5
 
 // Begin automatically generated code
 AudioInputI2S            i2s1;           //xy=101,321
@@ -103,12 +103,12 @@ struct BitState {
 
 BitState bits[N_BITS] = {
   {0, 0, 0, 0, 0, 0, 0, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, 0.5, &filterBand1, &mixerMarker1, &toneMarker1},
-  {0, 0, 0, 0, 0, 1, 1, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, 0.5, &filterBand2, &mixerMarker2, &toneMarker2},
-  {0, 0, 0, 0, 0, 2, 2, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, 0.5, &filterBand3, &mixerMarker3, &toneMarker3},
-  {0, 0, 0, 0, 0, 3, 3, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, 0.5, &filterBand4, &mixerMarker4, &toneMarker4}
+  {0, 0, 0, 0, 0, 1, 1, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, 0.4, &filterBand2, &mixerMarker2, &toneMarker2},
+  {0, 0, 0, 0, 0, 2, 2, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, 0.4, &filterBand3, &mixerMarker3, &toneMarker3},
+  // {0, 0, 0, 0, 0, 3, 3, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, 0.5, &filterBand4, &mixerMarker4, &toneMarker4}
 };
 
-int unusedMarkerPins[N_UNUSED_BITS] = {4, 5, 6, 9};
+int unusedMarkerPins[N_UNUSED_BITS] = {3, 4, 5, 6, 9};
 
 bool done;
 uint8_t virtualRegister = 0x00;
@@ -121,7 +121,7 @@ CRGB::HTMLColorCode FAULT = CRGB::DarkRed;
 
 // Declare global variables and constants
 const float FILTER_FREQ = 14000.0;
-const unsigned int DEBOUNCE_DELAY = 300;
+const unsigned int DEBOUNCE_DELAY = 50;
 const unsigned int TONE_DETECTION_DURATION = 600;
 
 float mixerLeftGain = 0.5;
@@ -185,15 +185,13 @@ void setup(){
 
 // Sets marker bits according to the status information in the (virtual) register
 void setMarkerBits(uint8_t virtualRegister){
-  for(int idx = 0; idx < N_BITS; idx++){
-    digitalWriteFast(bits[idx].pinNr, ((virtualRegister >> idx) & 0x01));
+  int pins[8] = {0, 1, 2, 3, 4, 5, 6, 9};
+  for(int idx = 0; idx < 8; idx++){
+    digitalWriteFast(pins[idx], ((virtualRegister >> idx) & 0x01));
   }
 };
 
-void loop(){
-
-  done = true;
-
+void checkFreqs(){
   for (int idx = 0; idx < N_BITS; idx++){
     bits[idx].goertzelState = bits[idx].freqFilter->read() > bits[idx].certainty;
     if (bits[idx].goertzelState == bits[idx].debounceState){
@@ -203,21 +201,46 @@ void loop(){
       bits[idx].debounceTime = 0;
       bits[idx].markerTime = 0;
     }
-
-    if (bits[idx].markerTime > TONE_DETECTION_DURATION){
-      bits[idx].markerState = bits[idx].debounceState;
-      // virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].markerState << bits[idx].bitIdx);
-      virtualRegister = virtualRegister | (bits[idx].markerState << bits[idx].bitIdx);
-    }
-
-    if (bits[idx].debounceState == true){
-      done = false;
-    }
   }
+}
 
-  if (done){
+const int SIGNAL_TONE = 0;
+const int DATA_LOW = 1;
+const int DATA_HIGH = 2;
+elapsedMillis markerClock = 0;
+
+void loop(){
+
+  checkFreqs();
+
+  if (bits[SIGNAL_TONE].debounceState && markerClock > 2000){
+    markerClock = 0;
+    int markerValues[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+    for (unsigned int idx = 0; idx < 8; idx++){
+      int highCount = 0;
+      int lowCount = 0;
+      while (markerClock < (200 * (idx+1))){
+        checkFreqs();
+        if (bits[DATA_LOW].debounceState){
+          lowCount++;
+        } else if (bits[DATA_HIGH].debounceState){
+          highCount++;
+        }
+      }
+      if (highCount >= lowCount){
+        markerValues[idx] = 1;
+        // Serial.println(1);
+      } else {
+        markerValues[idx] = 0;
+        // Serial.println(0);
+      }
+    }
+    for (int i = 0; i < 8; i++){
+       virtualRegister = virtualRegister | (markerValues[i] << i);
+       Serial.print(markerValues[7 - i]);
+    }
+    Serial.println("");
     setMarkerBits(virtualRegister);
-    // TODO: How long should a marker be?
     delay(500);
     virtualRegister = 0x00;
     setMarkerBits(virtualRegister);
