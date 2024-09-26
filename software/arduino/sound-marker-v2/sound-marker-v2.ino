@@ -20,7 +20,6 @@ AudioMixer4              mixerMarker;    //xy=572,436
 AudioFilterBiquad        filterRight;    //xy=580,347
 AudioFilterBiquad        filterLeft;     //xy=584,268
 AudioOutputI2S           i2s2;           //xy=781,307
-AudioAnalyzePeak         peakMarker;     //xy=945,438
 AudioFilterBiquad        filterBand1;        //xy=946,493
 AudioFilterBiquad        filterBand2; //xy=949,544
 AudioFilterBiquad        filterBand3; //xy=949,595
@@ -51,7 +50,6 @@ AudioConnection          patchCord3(i2s1, 1, mixerRight, 0);
 AudioConnection          patchCord4(filterMarker, 0, mixerMarker, 0);
 AudioConnection          patchCord5(mixerLeft, filterLeft);
 AudioConnection          patchCord6(mixerRight, filterRight);
-AudioConnection          patchCord7(mixerMarker, peakMarker);
 AudioConnection          patchCord8(mixerMarker, filterBand1);
 AudioConnection          patchCord9(mixerMarker, filterBand2);
 AudioConnection          patchCord10(mixerMarker, filterBand3);
@@ -117,6 +115,9 @@ uint8_t virtualRegister = 0x00;
 
 // Initialize led strip (status led)
 CRGB leds[N_LEDS * STRIPS];
+CRGB::HTMLColorCode ON = CRGB::HotPink;
+CRGB::HTMLColorCode SENDING = CRGB::DarkGreen;
+CRGB::HTMLColorCode FAULT = CRGB::DarkRed;
 
 // Declare global variables and constants
 const float FILTER_FREQ = 14000.0;
@@ -166,7 +167,7 @@ void setup(){
 
   // Set status led to pink
   FastLED.clear();
-  leds[0] = CRGB::HotPink;
+  leds[0] = ON;
   FastLED.show();
 
   // Initialize marker pins and corresponding frequency filters
@@ -180,7 +181,6 @@ void setup(){
   for (int idx = 0; idx < N_UNUSED_BITS; idx++){
     pinMode(unusedMarkerPins[idx], OUTPUT);
   }
-
 };
 
 // Sets marker bits according to the status information in the (virtual) register
@@ -217,9 +217,9 @@ void loop(){
 
   if (done){
     setMarkerBits(virtualRegister);
-    virtualRegister = 0x00;
     // TODO: How long should a marker be?
     delay(500);
+    virtualRegister = 0x00;
     setMarkerBits(virtualRegister);
   }
 
@@ -229,11 +229,10 @@ void loop(){
   }
 };
 
-// TODO: FIX!
 void processCommand(){
   // Function for processing serial commands used during parameter tuning.
   FastLED.clear();
-  leds[0] = CRGB::DarkRed;
+  leds[0] = SENDING;
   FastLED.show();
 
   String command = Serial.readStringUntil('\n');
@@ -314,6 +313,6 @@ void processCommand(){
   bits[cnt].certainty = val.toFloat();
 
   FastLED.clear();
-  leds[0] = CRGB::HotPink;
+  leds[0] = ON;
   FastLED.show();
 };
