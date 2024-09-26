@@ -38,17 +38,18 @@ def create_sound(bits, freq_mapping, return_sound=False):
     for b in bits:
         sine += makesine(freq_mapping[b]) * gain
         
+    sine = add_ramps(sine)
     # sine = add_ramps(sine)
     if return_sound:
         return ipd.Audio(sine, rate=SAMPLING_FREQUENCY, normalize = False, autoplay=True)
     else:
         return sine
     
-def add_ramps(sine, duration=100):
-    length = (SAMPLING_FREQUENCY//1000) * duration
-    ramps = np.ones(SAMPLING_FREQUENCY)
-    ramps[:length] = np.linspace(0, 1, length)
-    ramps[-length:] = np.linspace(1, 0, length)
+def add_ramps(sine):
+    length = int((SAMPLING_FREQUENCY//1000) * DURATION)
+    ramps = np.ones(8820)
+    ramps[:100] = np.linspace(0, 1, 100)
+    ramps[-100:] = np.linspace(1, 0, 100)
     return sine * ramps
     
 def create_sounds(bits, freq_mapping):
@@ -76,7 +77,7 @@ def create_signal(bitstr):
 
 def create_silence():
     
-    silence = create_sound([3, 4], freq_mapping)
+    silence = create_sound([3, 4], freq_mapping) * 0
     
     final = list()
     for _ in range(8):
