@@ -8,6 +8,8 @@
 #define DATA_PIN 17
 #define N_LEDS 1
 #define STRIPS 1
+#define N_BITS 4
+#define N_UNUSED_BITS 4
 
 // Begin automatically generated code
 AudioInputI2S            i2s1;           //xy=101,321
@@ -79,35 +81,44 @@ AudioConnection          patchCord33(mixerMarker8, toneMarker8);
 AudioControlSGTL5000     sgtl5000_1;     //xy=827,182
 // End automatically generated code
 
-// Define structure for managing bits
-struct BitState {
-  bool state;
-  int bitIdx;
-  int pinNr;
-  int registerIdx;  // Used to directly set the pins in register GPIO6. Deprecated with the new pin numbers.
-  float frequency;
-  float gain;
-  AudioFilterBiquad *band_filter;
-  AudioMixer4 *amplifier;
-  AudioAnalyzeToneDetect *freq_filter;
-  bool last_state;
-  elapsedMillis debounce_time;
-  float certainty;
-};
-
 // For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles
 float SAMPELING_FREQUENCY = 44100; // Hz
 float GOERTZEL_CYCLES = 150;
 float FREQUENCY_MULTIPLES = SAMPELING_FREQUENCY / GOERTZEL_CYCLES;
 float STARTING_MULTIPLE = 52.0;  // 52 --> 15288.0
 
+struct BitState {
+  bool goertzelState;
+  bool debounceState;
+  elapsedMillis debounceTime;
+  bool markerState;
+  elapsedMillis markerTime;
+  int bitIdx;
+  int pinNr;
+  float frequency;
+  float gain;
+  float certainty;
+  AudioFilterBiquad *bandFilter;
+  AudioMixer4 *amplifier;
+  AudioAnalyzeToneDetect *freqFilter;
+};
+
+BitState bits[N_BITS] = {
+  {0, 0, 0, 0, 0, 0, 0, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, 0.5, &filterBand1, &mixerMarker1, &toneMarker1},
+  {0, 0, 0, 0, 0, 1, 1, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, 0.5, &filterBand2, &mixerMarker2, &toneMarker2},
+  {0, 0, 0, 0, 0, 2, 2, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, 0.5, &filterBand3, &mixerMarker3, &toneMarker3},
+  {0, 0, 0, 0, 0, 3, 3, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, 0.5, &filterBand4, &mixerMarker4, &toneMarker4}
+};
+
+int unusedMarkerPins[N_UNUSED_BITS] = {4, 5, 6, 9};
+
+bool done;
+uint8_t virtualRegister = 0x00;
+
 // Initialize led strip (status led)
 CRGB leds[N_LEDS * STRIPS];
 
 // Declare global variables and constants
-elapsedMillis msecs;
-const float AMPLITUDE_THRESHOLD = 0.5;
-const float DETECTION_THRESHOLD = 0.5;
 const float FILTER_FREQ = 14000.0;
 const unsigned int DEBOUNCE_DELAY = 300;
 const unsigned int TONE_DETECTION_DURATION = 600;
@@ -122,20 +133,6 @@ float lowpassQualityRight1 = 1.0;
 float lowpassQualityRight2 = 1.0;
 float highpassQuality = 8.0;
 float bandFilterQuality = 8.0;
-
-uint8_t virtualRegister = 0x00;
-
-// Initialize bits
-BitState bits[8] = {
-  {0, 0, 0, 2, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, &filterBand1, &mixerMarker1, &toneMarker1, 0, 0, DETECTION_THRESHOLD},
-  {0, 1, 1, 3, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, &filterBand2, &mixerMarker2, &toneMarker2, 0, 0, DETECTION_THRESHOLD},
-  {0, 2, 2, 12, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, &filterBand3, &mixerMarker3, &toneMarker3, 0, 0, DETECTION_THRESHOLD},
-  {0, 3, 3, 16, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, &filterBand4, &mixerMarker4, &toneMarker4, 0, 0, DETECTION_THRESHOLD},
-  {0, 4, 4, 18, (STARTING_MULTIPLE + 4) * FREQUENCY_MULTIPLES, 6.0, &filterBand5, &mixerMarker5, &toneMarker5, 0, 0, DETECTION_THRESHOLD},
-  {0, 5, 5, 22, (STARTING_MULTIPLE + 5) * FREQUENCY_MULTIPLES, 6.0, &filterBand6, &mixerMarker6, &toneMarker6, 0, 0, DETECTION_THRESHOLD},
-  {0, 6, 6, 23, (STARTING_MULTIPLE + 6) * FREQUENCY_MULTIPLES, 6.0, &filterBand7, &mixerMarker7, &toneMarker7, 0, 0, DETECTION_THRESHOLD},
-  {0, 7, 9, 24, (STARTING_MULTIPLE + 7) * FREQUENCY_MULTIPLES, 6.0, &filterBand8, &mixerMarker8, &toneMarker8, 0, 0, DETECTION_THRESHOLD}
-};
 
 void setup(){
   // Start serial connection
@@ -173,14 +170,66 @@ void setup(){
   FastLED.show();
 
   // Initialize marker pins and corresponding frequency filters
-  for(int idx = 0; idx < 8; idx++){
+  for (int idx = 0; idx < N_BITS; idx++){
     pinMode(bits[idx].pinNr, OUTPUT);
-    bits[idx].band_filter->setBandpass(0, bits[idx].frequency, bandFilterQuality);
+    bits[idx].bandFilter->setBandpass(0, bits[idx].frequency, bandFilterQuality);
     bits[idx].amplifier->gain(0, bits[idx].gain);
-    bits[idx].freq_filter->frequency(bits[idx].frequency, GOERTZEL_CYCLES);
+    bits[idx].freqFilter->frequency(bits[idx].frequency, GOERTZEL_CYCLES);
+  }
+
+  for (int idx = 0; idx < N_UNUSED_BITS; idx++){
+    pinMode(unusedMarkerPins[idx], OUTPUT);
+  }
+
+};
+
+// Sets marker bits according to the status information in the (virtual) register
+void setMarkerBits(uint8_t virtualRegister){
+  for(int idx = 0; idx < N_BITS; idx++){
+    digitalWriteFast(bits[idx].pinNr, ((virtualRegister >> idx) & 0x01));
   }
 };
 
+void loop(){
+
+  done = true;
+
+  for (int idx = 0; idx < N_BITS; idx++){
+    bits[idx].goertzelState = bits[idx].freqFilter->read() > bits[idx].certainty;
+    if (bits[idx].goertzelState == bits[idx].debounceState){
+      bits[idx].debounceTime = 0;
+    } else if (bits[idx].debounceTime > DEBOUNCE_DELAY){
+      bits[idx].debounceState = bits[idx].goertzelState;
+      bits[idx].debounceTime = 0;
+      bits[idx].markerTime = 0;
+    }
+
+    if (bits[idx].markerTime > TONE_DETECTION_DURATION){
+      bits[idx].markerState = bits[idx].debounceState;
+      // virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].markerState << bits[idx].bitIdx);
+      virtualRegister = virtualRegister | (bits[idx].markerState << bits[idx].bitIdx);
+    }
+
+    if (bits[idx].debounceState == true){
+      done = false;
+    }
+  }
+
+  if (done){
+    setMarkerBits(virtualRegister);
+    virtualRegister = 0x00;
+    // TODO: How long should a marker be?
+    delay(500);
+    setMarkerBits(virtualRegister);
+  }
+
+  // TODO: Broke serial output!
+  if (Serial.available()){
+    processCommand();
+  }
+};
+
+// TODO: FIX!
 void processCommand(){
   // Function for processing serial commands used during parameter tuning.
   FastLED.clear();
@@ -210,7 +259,6 @@ void processCommand(){
   for(unsigned int i = 0; i < command.length(); i++){
     current = command.charAt(i);
     if (current == ' '){
-      // Serial.println(command.substring(prev, i));
       val = command.substring(prev, i);
       prev = i+1;
       if(cnt == 0){
@@ -220,15 +268,15 @@ void processCommand(){
         filterMarker.setHighpass(0, FILTER_FREQ, val.toFloat());
         cnt++;
       } else if (cnt == 2){
-          for(int idx = 0; idx < 8; idx++){
-            bits[idx].band_filter->setBandpass(0, bits[idx].frequency, val.toFloat());
+          for(int idx = 0; idx < N_BITS; idx++){
+            bits[idx].bandFilter->setBandpass(0, bits[idx].frequency, val.toFloat());
           }
       }
     }
   }
   val = command.substring(prev, command.length());
-  for(int idx = 0; idx < 8; idx++){
-    bits[idx].freq_filter->frequency(bits[idx].frequency, val.toFloat());  // 200 cycles = 4.5 ms window length
+  for(int idx = 0; idx < N_BITS; idx++){
+    bits[idx].freqFilter->frequency(bits[idx].frequency, val.toFloat());  // 200 cycles = 4.5 ms window length
   }
 
   command = Serial.readStringUntil('\n');
@@ -246,7 +294,7 @@ void processCommand(){
   val = command.substring(prev, command.length());
   bits[cnt].gain = val.toFloat();
 
-  for(int idx = 0; idx < 8; idx++){
+  for(int idx = 0; idx < N_BITS; idx++){
     bits[idx].amplifier->gain(0, bits[idx].gain);
   }
 
@@ -268,49 +316,4 @@ void processCommand(){
   FastLED.clear();
   leds[0] = CRGB::HotPink;
   FastLED.show();
-};
-
-// Sets marker bits according to the status information in the (virtual) register
-void setMarkerBits(uint8_t virtualRegister){
-  for(int idx = 0; idx < 8; idx++){
-    digitalWriteFast(bits[idx].pinNr, ((virtualRegister >> idx) & 0x01));
-  }
-  // GPIO6_DR = (GPIO6_DR & ~(1 << bits[idx].registerIdx)) | (bits[idx].state << bits[idx].registerIdx);
-};
-
-void loop(){
-  if(msecs > 20){
-    if(peakMarker.available() && peakMarker.read() > AMPLITUDE_THRESHOLD){
-      msecs = 0;
-      for(int idx = 0; idx < 8; idx++){
-        bool new_state = bits[idx].freq_filter->read() > bits[idx].certainty;
-        if(new_state != bits[idx].last_state){
-          bits[idx].last_state = new_state;
-          bits[idx].debounce_time = 0;
-        } else if (new_state == bits[idx].last_state && bits[idx].debounce_time > DEBOUNCE_DELAY){
-            if (bits[idx].debounce_time > TONE_DETECTION_DURATION){
-              bits[idx].state = new_state;
-            }
-        }
-        virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
-        // Serial.print(bits[idx].state);
-      }
-      // setMarkerBits(virtualRegister);
-      // Serial.println();
-    }
-  }
-  if(msecs > TONE_DETECTION_DURATION){
-    msecs = 0;
-    for(int idx = 0; idx < 8; idx++){
-      virtualRegister = (virtualRegister & ~(1 << bits[idx].bitIdx)) | (bits[idx].state << bits[idx].bitIdx);
-      Serial.print(bits[idx].state);
-      bits[idx].state = 0;
-    }
-    setMarkerBits(virtualRegister);
-    Serial.println();
-  }
-
-  if(Serial.available()){
-    processCommand();
-  }
 };

@@ -187,7 +187,7 @@ def tune_parameters(bits, tune_ranges, n_repetitions, device, noise = 0.0):
     
     if not os.path.exists(OUTFILE):
         with open(OUTFILE, 'w') as fo:
-            fo.write(f"accuracy, noise, gain0, gain1, gain2, gain3, gain4, gain5, gain6, gain7, thresh0, thresh1, thresh2, thresh3, thresh4, thresh5, thresh6, thresh7, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
+            fo.write(f"accuracy, noise, gain0, gain1, gain2, gain3, thresh0, thresh1, thresh2, thresh3, {', '.join([x.replace(',', '') for x in map(str, chain.from_iterable(combinations(bits, r) for r in range(1, len(bits) + 1)))])}\n")
             fo.close()
             
     for nr, case in enumerate(cases):
@@ -274,8 +274,8 @@ if __name__ == "__main__":
         "high": tuple([8.0]),
         "band": tuple([8.0]),
         "goertzel": tuple([150]),
-        "gains": tuple([[4, 4, 6, 6, 6, 6, 6, 6], [6, 6, 6, 6, 6, 6, 6, 6]]),
-        "certainties": tuple([[.5, .5, .5, .5, .5, .5, .5, .5]])
+        "gains": tuple([[4, 4, 6, 6,], [6, 6, 6, 6]]),
+        "certainties": tuple([[.5, .5, .5, .5]])
     }
     
     params = {
@@ -283,8 +283,8 @@ if __name__ == "__main__":
         "high": 8.0,
         "band": 8.0,
         "goertzel": 150,
-        "gains": [4, 4, 6, 6, 6, 6, 6, 6],
-        "certainties": [.5, .5, .5, .5, .5, .5, .5, .5]
+        "gains": [4, 4, 6, 6],
+        "certainties": [.5, .5, .5, .5]
     }
     
     for lower_range in [15000]:
