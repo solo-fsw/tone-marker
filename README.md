@@ -40,7 +40,9 @@ Some USB power adapters have some noise, which is then audible in the audio sign
 
 ### Volume
 
-Different values of input audio volume might affect Tone Marker performance in different ways. The currently recommended volume level is 65% (on a windows PC). Marker functionality can be monitored by checking the green LEDs.
+Different values of input audio volume might affect Tone Marker performance in different ways. The currently recommended volume level is 65% (on a windows PC) or 90% (on VR glasses).
+
+Furthermore, VR glasses seem to have a lower volume output, so heightening the gain of the marker soundfiles is recommended. Marker functionality can be monitored by checking the green LEDs.
 
 ### Additional information / sources
 
