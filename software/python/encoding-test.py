@@ -12,7 +12,7 @@ RANGE = [15000, 18000]
 DURATION = .2
 GOERTZEL = 150
 
-OUTDIR = os.path.abspath("../../data/new")
+OUTDIR = os.path.abspath("../../data/encoding")
 
 #%%
 def frequency_mapping(goertzel_cycles, n_bits=8):
@@ -62,7 +62,7 @@ def create_sounds(bits, freq_mapping):
         
     return sounds
 
-def create_signal(bitstr):
+def create_signal(bitstr, freq_mapping):
     data_high = create_sound([0, 2], freq_mapping)
     data_low = create_sound([0, 1], freq_mapping)
     
@@ -85,50 +85,23 @@ def create_silence():
         
     return np.array(final)
 
+def create_soundfiles(freq_mapping):
+    for idx, p in enumerate(chain.from_iterable(combinations(list(range(8)), r) for r in range(1, 8 + 1))):
+        bitstring = ''.join('1' if i in p else '0' for i in range(8))[::-1]
+        value = str(int(bitstring, 2))
+        signal = create_signal(bitstring[::-1], freq_mapping)
+
+        sf.write(f"{os.path.join(OUTDIR, value)}.wav", signal, SAMPLING_FREQUENCY)
+            
+        segment = pydub.AudioSegment.from_wav(f"{os.path.join(OUTDIR, 'wav', value)}.wav")
+        
+        quieter_segment = segment - 6
+        mp3_segment = segment - 2
+        
+        quieter_segment.export(f"{os.path.join(OUTDIR, 'wav', value)}.wav", format='wav')
+        mp3_segment.export(f"{os.path.join(OUTDIR, 'mp3', value)}.mp3", format='mp3')
 
 #%%
 
 if __name__ == "__main__":
-    n_bits = 4
-    bits = list(range(n_bits))
-    
-    freq_mapping = frequency_mapping(GOERTZEL)
-    
-    signal = create_sound([0], freq_mapping)
-    
-    # bitstr = create_signal([1, 1, 1, 1, 1, 1, 1, 0][::-1])
-    bitstr = [
-        *create_signal([1, 1, 1, 1, 1, 1, 1, 1][::-1]),
-        *create_silence(),
-        *create_signal([1, 1, 1, 1, 1, 1, 1, 0][::-1]),
-        *create_silence(),
-        *create_signal([1, 1, 1, 1, 1, 1, 0, 0][::-1]),
-        *create_silence(),
-        *create_signal([1, 1, 1, 1, 1, 0, 0, 0][::-1]),
-        *create_silence(),
-        *create_signal([1, 1, 1, 1, 0, 0, 0, 0][::-1]),
-        *create_silence(),
-        *create_signal([1, 1, 1, 0, 0, 0, 0, 0][::-1]),
-        *create_silence(),
-        *create_signal([1, 1, 0, 0, 0, 0, 0, 0][::-1]),
-        *create_silence(),
-        *create_signal([1, 0, 0, 0, 0, 0, 0, 0][::-1]),
-    ]
-    
-    if not os.path.isdir(OUTDIR):
-        os.mkdir(OUTDIR)
-    
-    sf.write(f"{os.path.join(OUTDIR, 'bitstr')}.wav", bitstr, SAMPLING_FREQUENCY)
-    
-    marker_value = "bitstr"
-    
-    segment = pydub.AudioSegment.from_wav(f"{os.path.join(OUTDIR, marker_value)}.wav")
-    
-    quieter_segment = segment - 6
-    mp3_segment = segment - 2
-    
-    quieter_segment.export(f"{os.path.join(OUTDIR, marker_value)}.wav", format='wav')
-    mp3_segment.export(f"{os.path.join(OUTDIR, marker_value)}.mp3", format='mp3')
-
-        
-# %%
+    create_soundfiles(frequency_mapping(GOERTZEL))
