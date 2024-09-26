@@ -1,6 +1,6 @@
 # Tone Markers
 
-![The Tone Marker device](./readme-media/toneMarkerDevice.png)  <!-- TODO -->
+<!-- ![The Tone Marker device](./readme-media/toneMarkerDevice.png)  TODO -->
 
 ## Device purpose
 
@@ -12,7 +12,7 @@ Sending markers is necessary for synchronization of recorded data (e.g. BIOPAC m
 
 ### Setup
 
-Internally, the Tone Marker device consists of a Teesy 4.0 ([Teensy 4.0](https://www.pjrc.com/store/teensy40.html)) and a custom made PCB audioboard. <!-- TODO: Add PCB image?--> 
+Internally, the Tone Marker device consists of a Teesy 4.0 ([Teensy 4.0](https://www.pjrc.com/store/teensy40.html)) and a custom made PCB audioboard.
 Power is provided through a Mini-USB connection to a dedicated power source (such as a powerbank). The audio input (from e.g. the VR glasses) is fed into the tone-marker, while simultaneously being fed directly into the marker destination (for quality control). Marker output is done through a Female DB25 connector, which is then connected to the required data recording device (e.g. BIOPAC, BIOSEMI).
 
 An overview of the internal and external connections is shown below.
@@ -21,16 +21,15 @@ An overview of the internal and external connections is shown below.
 
 ### Communication protocol
 
-The device expects tones (or combinations of tones) of specific frequencies. The device is currently optimized for performance on the first four bits (marker values 0 through 15).
+The device expects tones (or combinations of tones) of specific frequencies. The device is currently uses an encoding system with a signal line and two data lines. The signal line makes the device enter listening mode. In listening mode the device receives a bitstring by interpreting the other two frequencies as either 0's (LOW) or 1's (high).
 
 Frequencies are detected by the goertzel algorithm, and are therefore optimized for their respective goertzel bin. This is done for the goertzel algorithm using 150 clock cycles and a sampling frequency of 44100, resulting in the following frequencies:
 
-- **bit 0**: 15288.0 Hz
-- **bit 1**: 15582.0 Hz
-- **bit 2**: 15876.0 Hz
-- **bit 3**: 16170.0 Hz
+- **Signal frequency**: 15288.0 Hz
+- **Data LOW frequency**: 15582.0 Hz
+- **Data HIGH frequency**: 15876.0 Hz
 
-Soundfiles for these marker values can be found in this repository (in the `media` directory). Usage of the `.wav` files is recommended, since they are less compressed than the `.mp3` files.
+Soundfiles for marker values under this encoding can be found in this repository (in the `media` directory). Usage of the `.wav` files is recommended, since they are less compressed than the `.mp3` files.
 
 ## Notes
 
@@ -40,7 +39,7 @@ Some USB power adapters have some noise, which is then audible in the audio sign
 
 ### Volume
 
-Different values of input audio volume might affect Tone Marker performance in different ways. The currently recommended volume level is 65% (on a windows PC) or 90% (on VR glasses).
+Different values of input audio volume might affect Tone Marker performance in different ways. The currently recommended volume level is 65% (on a windows PC) or 80% (on VR glasses).
 
 Furthermore, VR glasses seem to have a lower volume output, so heightening the gain of the marker soundfiles is recommended. Marker functionality can be monitored by checking the green LEDs.
 
