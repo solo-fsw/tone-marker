@@ -105,13 +105,17 @@ BitState bits[N_BITS] = {
   {0, 0, 0, 0, 0, 0, 0, (STARTING_MULTIPLE + 0) * FREQUENCY_MULTIPLES, 4.0, 0.5, &filterBand1, &mixerMarker1, &toneMarker1},
   {0, 0, 0, 0, 0, 1, 1, (STARTING_MULTIPLE + 1) * FREQUENCY_MULTIPLES, 4.0, 0.4, &filterBand2, &mixerMarker2, &toneMarker2},
   {0, 0, 0, 0, 0, 2, 2, (STARTING_MULTIPLE + 2) * FREQUENCY_MULTIPLES, 6.0, 0.4, &filterBand3, &mixerMarker3, &toneMarker3},
-  // {0, 0, 0, 0, 0, 3, 3, (STARTING_MULTIPLE + 3) * FREQUENCY_MULTIPLES, 6.0, 0.5, &filterBand4, &mixerMarker4, &toneMarker4}
 };
 
+int pins[8] = {0, 1, 2, 3, 4, 5, 6, 9};
 int unusedMarkerPins[N_UNUSED_BITS] = {3, 4, 5, 6, 9};
-
-bool done;
+int markerValues[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 uint8_t virtualRegister = 0x00;
+
+const int SIGNAL_TONE = 0;
+const int DATA_LOW = 1;
+const int DATA_HIGH = 2;
+elapsedMillis markerClock = 0;
 
 // Initialize led strip (status led)
 CRGB leds[N_LEDS * STRIPS];
@@ -185,7 +189,6 @@ void setup(){
 
 // Sets marker bits according to the status information in the (virtual) register
 void setMarkerBits(uint8_t virtualRegister){
-  int pins[8] = {0, 1, 2, 3, 4, 5, 6, 9};
   for(int idx = 0; idx < 8; idx++){
     digitalWriteFast(pins[idx], ((virtualRegister >> idx) & 0x01));
   }
@@ -202,20 +205,12 @@ void checkFreqs(){
       bits[idx].markerTime = 0;
     }
   }
-}
-
-const int SIGNAL_TONE = 0;
-const int DATA_LOW = 1;
-const int DATA_HIGH = 2;
-elapsedMillis markerClock = 0;
+};
 
 void loop(){
-
   checkFreqs();
-
   if (bits[SIGNAL_TONE].debounceState && markerClock > 2000){
     markerClock = 0;
-    int markerValues[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     for (unsigned int idx = 0; idx < 8; idx++){
       int highCount = 0;
       int lowCount = 0;
@@ -229,10 +224,8 @@ void loop(){
       }
       if (highCount >= lowCount){
         markerValues[idx] = 1;
-        // Serial.println(1);
       } else {
         markerValues[idx] = 0;
-        // Serial.println(0);
       }
     }
     for (int i = 0; i < 8; i++){
@@ -245,97 +238,5 @@ void loop(){
     virtualRegister = 0x00;
     setMarkerBits(virtualRegister);
   }
-
-  // TODO: Broke serial output!
-  if (Serial.available()){
-    processCommand();
-  }
 };
 
-void processCommand(){
-  // Function for processing serial commands used during parameter tuning.
-  FastLED.clear();
-  leds[0] = SENDING;
-  FastLED.show();
-
-  String command = Serial.readStringUntil('\n');
-  char current;
-  String val;
-  unsigned int prev = 0;
-  unsigned int cnt = 0;
-  for(unsigned int i = 0; i < command.length(); i++){
-    current = command.charAt(i);
-    if (current == ' '){
-      val = command.substring(prev, i);
-      prev = i+1;
-      bits[cnt].frequency = val.toFloat();
-      cnt++;
-    }
-  }
-  val = command.substring(prev, command.length());
-  bits[cnt].frequency = val.toFloat();
-
-  command = Serial.readStringUntil('\n');
-  prev = 0;
-  cnt = 0;
-  for(unsigned int i = 0; i < command.length(); i++){
-    current = command.charAt(i);
-    if (current == ' '){
-      val = command.substring(prev, i);
-      prev = i+1;
-      if(cnt == 0){
-        mixerMarker.gain(0, val.toFloat());
-        cnt++;
-      } else if (cnt == 1){
-        filterMarker.setHighpass(0, FILTER_FREQ, val.toFloat());
-        cnt++;
-      } else if (cnt == 2){
-          for(int idx = 0; idx < N_BITS; idx++){
-            bits[idx].bandFilter->setBandpass(0, bits[idx].frequency, val.toFloat());
-          }
-      }
-    }
-  }
-  val = command.substring(prev, command.length());
-  for(int idx = 0; idx < N_BITS; idx++){
-    bits[idx].freqFilter->frequency(bits[idx].frequency, val.toFloat());  // 200 cycles = 4.5 ms window length
-  }
-
-  command = Serial.readStringUntil('\n');
-  prev = 0;
-  cnt = 0;
-  for(unsigned int i = 0; i < command.length(); i++){
-    current = command.charAt(i);
-    if (current == ' '){
-      val = command.substring(prev, i);
-      prev = i+1;
-      bits[cnt].gain = val.toFloat();
-      cnt++;
-      }
-    }
-  val = command.substring(prev, command.length());
-  bits[cnt].gain = val.toFloat();
-
-  for(int idx = 0; idx < N_BITS; idx++){
-    bits[idx].amplifier->gain(0, bits[idx].gain);
-  }
-
-  command = Serial.readStringUntil('\n');
-  prev = 0;
-  cnt = 0;
-  for(unsigned int i = 0; i < command.length(); i++){
-    current = command.charAt(i);
-    if (current == ' '){
-      val = command.substring(prev, i);
-      prev = i+1;
-      bits[cnt].certainty = val.toFloat();
-      cnt++;
-      }
-    }
-  val = command.substring(prev, command.length());
-  bits[cnt].certainty = val.toFloat();
-
-  FastLED.clear();
-  leds[0] = ON;
-  FastLED.show();
-};
