@@ -21,3 +21,6 @@ https://github.com/user-attachments/assets/86b7fc8c-2f64-4855-9381-386859c7324d
 
 https://github.com/user-attachments/assets/1103ceb1-bd0c-42ad-bfc5-2b33b74930ea
 
+## Encoding test
+
+https://github.com/solo-fsw/sound-tone-marker/raw/refs/heads/tone-marker-v2/docs/bitstr.wav
