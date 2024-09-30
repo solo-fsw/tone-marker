@@ -29,7 +29,9 @@ Frequencies are detected by the goertzel algorithm, and are therefore optimized 
 - **Data LOW frequency**: 15582.0 Hz
 - **Data HIGH frequency**: 15876.0 Hz
 
-Soundfiles for marker values under this encoding can be found in this repository (in the `media` directory). Usage of the `.wav` files is recommended, since they are less compressed than the `.mp3` files.
+Soundfiles for marker values under this encoding can be found in this repository (in the `media` directory). This directory also contains a movie file (`marker-testing.mp4`) that can be used to test marker accuracy in your setup. Custom test movies can be made by running `software/python/video-generation.py`.
+
+Overall, usage of the `.wav` files is recommended, since they are less compressed than the `.mp3` files.
 
 ## Notes
 
