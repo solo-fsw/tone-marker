@@ -1,10 +1,11 @@
 # Tone Markers
 
-<!-- ![The Tone Marker device](./readme-media/toneMarkerDevice.png)  TODO -->
+<!-- TODO -->
+<!-- ![The Tone Marker device](./readme-media/toneMarkerDevice.png) -->
 
 ## Device purpose
 
-The purpose of the "Tone Marker" device is to translate high-frequency tones ($\ge$ 15KHz) into Transistor-transistor Logic (TTL) markers. This allows any application with an audio output (e.g. virtual reality games, websites, cellphones) to send custom markers (values ranging from 0 up to 255) by embedding these marker tones in the audio output.
+The purpose of the "Tone Marker" device is to translate high-frequency tones ($\ge$ 15 kHz) into Transistor-transistor Logic (TTL) markers. This allows any application with an audio output (e.g. virtual reality games, websites, cellphones) to send custom markers (values ranging from 0 up to 255) by embedding these marker tones in the audio output.
 
 Sending markers is necessary for synchronization of recorded data (e.g. BIOPAC measurements) with VR experiences, where hardware control is not possible. Marker tones are chosen in such a way that they are inaudible for the participant (through audio filtering).
 
@@ -36,22 +37,26 @@ Overall, usage of the `.wav` files is recommended, since they are less compresse
 ## Current issues
 
 ### Port resgister usage
-<!-- BUG -->
+<!-- FIXME -->
 
 Currently, when measuring for half an hour at 25 kHz, approximately 24 of 344 markers showed intermediate values when setting all bits to their on state (255). When measuring for half an hour at 2 kHz, the same problem occured only once (1 / 344).
 
-As such, the PCB needs to be redesigned in such a way that it makes use of port registers. Usage of the pins mentioned below is suggested, since they are not used by the teensy audio shield, and can all be controlled by the GPIO6 register.
+As such, the PCB needs to be redesigned in such a way that it makes use of port registers. Usage of the pins mentioned below is suggested, since they are not used by the teensy audio shield, and can all be controlled by changing the GPIO6 register.
 
 | Pin number 	| GPIO6 register index 	|
 |------------	|----------------------	|
 | 01         	| 02                   	|
 | 00         	| 03                   	|
 | 24         	| 12                   	|
-| 26         	| 16                   	|
 | 14         	| 18                   	|
 | 17         	| 22                   	|
 | 16         	| 23                   	|
 | 22         	| 24                   	|
+| 26         	| 30                   	|
+
+> **NOTE**: Register setting resulted in two intermediate markers when testing for 360 markers, so register setting might not be the perfect solution...
+
+The [PhysioData Toolbox](https://physiodatatoolbox.leidenuniv.nl/) automatically corrects for this problem, but you could also apply your own correction mechanisme by ignoring all markers with a duration of a single timestep (through, for example, thresholding).
 
 ### Power supply
 <!-- FIXME -->
@@ -75,8 +80,8 @@ Furthermore, VR glasses seem to have a lower volume output, so heightening the g
 ### Additional information / sources
 
 - [Information on the Teensy 4.0 audioshield](https://forum.pjrc.com/index.php?threads/available-teensy-4-0-pins-when-audio-shield-d-attached.58331/)
-- [Information on available Teensy pins while the audioshield is connected](https://github.com/luni64/TeensyTimerTool/wiki/Avoid-PWM-timer-clashes)
-- [Teensy pin-register mapping](https://forum.pjrc.com/index.php?threads/teensy-4-1-digital-i-o-pin-map.64226/)
+- [Information on available Teensy pins while the audioshield is connected (and register mappings)](https://github.com/luni64/TeensyTimerTool/wiki/Avoid-PWM-timer-clashes)
+- [Teensy pin-register forum thread](https://forum.pjrc.com/index.php?threads/teensy-4-1-digital-i-o-pin-map.64226/)
 - [Using Teensy GPIO registers](https://forum.pjrc.com/index.php?threads/tutorial-on-digital-i-o-atmega-pin-port-ddr-d-b-registers-vs-arm-gpio_pdir-_pdor.17532/)
 - [DigitalRead, DigitalWrite, DigitalWriteFast speeds](https://forum.pjrc.com/index.php?threads/speed-of-digitalread-and-digitalwrite-with-teensy3-0.24573/)
 - [Additional explanation on registers](https://forum.pjrc.com/index.php?threads/unclear-on-how-to-use-ddrx-and-portx-teensy-3-2.53950/)

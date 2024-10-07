@@ -5,6 +5,8 @@
 #include <SerialFlash.h>
 #include <FastLED.h>
 
+#define REQUIREMENTS_FOLLOWED false
+
 #define DATA_PIN 17
 #define N_LEDS 1
 #define STRIPS 1
@@ -48,7 +50,6 @@ AudioConnection          patchCord16(mixerMarker2, toneMarker2);
 AudioConnection          patchCord17(mixerMarker3, toneMarker3);
 AudioControlSGTL5000     sgtl5000_1;     //xy=858,202
 // GUItool: end automatically generated code
-
 
 // For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles
 float SAMPELING_FREQUENCY = 44100; // Hz
@@ -167,8 +168,12 @@ void setup(){
 
 // Sets marker bits according to the status information in the (virtual) register
 void setMarkerBits(uint8_t virtualRegister){
-  for(int idx = 0; idx < 8; idx++){
-    digitalWriteFast(pins[idx], ((virtualRegister >> idx) & 0x01));
+  if(REQUIREMENTS_FOLLOWED){
+    
+  } else{
+    for(int idx = 0; idx < 8; idx++){
+      digitalWriteFast(pins[idx], ((virtualRegister >> idx) & 0x01));
+    }
   }
 };
 
