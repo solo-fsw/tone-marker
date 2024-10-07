@@ -6,7 +6,7 @@
 
 The purpose of the "Tone Marker" device is to translate high-frequency tones ($\ge$ 15KHz) into Transistor-transistor Logic (TTL) markers. This allows any application with an audio output (e.g. virtual reality games, websites, cellphones) to send custom markers (values ranging from 0 up to 255) by embedding these marker tones in the audio output.
 
-Sending markers is necessary for synchronization of recorded data (e.g. BIOPAC measurements) with VR experiences, where hardware control is not possible.
+Sending markers is necessary for synchronization of recorded data (e.g. BIOPAC measurements) with VR experiences, where hardware control is not possible. Marker tones are chosen in such a way that they are inaudible for the participant (through audio filtering).
 
 ## Usage
 
@@ -32,6 +32,33 @@ Frequencies are detected by the goertzel algorithm, and are therefore optimized 
 Soundfiles for marker values under this encoding can be found in this repository (in the `media` directory). This directory also contains a movie file (`marker-testing.mp4`) that can be used to test marker accuracy in your setup. Custom test movies can be made by running `software/python/video-generation.py`.
 
 Overall, usage of the `.wav` files is recommended, since they are less compressed than the `.mp3` files.
+
+## Current issues
+
+### Port resgister usage
+<!-- BUG -->
+
+Currently, when measuring for half an hour at 25 kHz, approximately 24 of 344 markers showed intermediate values when setting all bits to their on state (255). When measuring for half an hour at 2 kHz, the same problem occured only once (1 / 344).
+
+As such, the PCB needs to be redesigned in such a way that it makes use of port registers. Usage of the pins mentioned below is suggested, since they are not used by the teensy audio shield, and can all be controlled by the GPIO6 register.
+
+| Pin number 	| GPIO6 register index 	|
+|------------	|----------------------	|
+| 01         	| 02                   	|
+| 00         	| 03                   	|
+| 24         	| 12                   	|
+| 26         	| 16                   	|
+| 14         	| 18                   	|
+| 17         	| 22                   	|
+| 16         	| 23                   	|
+| 22         	| 24                   	|
+
+### Power supply
+<!-- FIXME -->
+
+Currently, the device enters an undefined state while being connected to the BIOPAC without being powered by the micro-USB connector.
+
+This could possibly damage the teensy.
 
 ## Notes
 

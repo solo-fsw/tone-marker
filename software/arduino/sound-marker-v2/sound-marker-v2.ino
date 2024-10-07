@@ -11,7 +11,7 @@
 #define N_BITS 3
 #define N_UNUSED_BITS 5
 
-// Begin automatically generated code
+// GUItool: begin automatically generated code
 AudioInputI2S            i2s1;           //xy=101,321
 AudioFilterBiquad        filterMarker;   //xy=346,417
 AudioMixer4              mixerLeft;      //xy=348,268
@@ -23,61 +23,32 @@ AudioOutputI2S           i2s2;           //xy=781,307
 AudioFilterBiquad        filterBand1;        //xy=946,493
 AudioFilterBiquad        filterBand2; //xy=949,544
 AudioFilterBiquad        filterBand3; //xy=949,595
-AudioFilterBiquad        filterBand4; //xy=950,649
-AudioFilterBiquad        filterBand5; //xy=952,698
-AudioFilterBiquad        filterBand6; //xy=955,747
-AudioFilterBiquad        filterBand7; //xy=957,795
-AudioFilterBiquad        filterBand8; //xy=957,841
 AudioMixer4              mixerMarker1;         //xy=1261,409
 AudioMixer4              mixerMarker2; //xy=1265,497
 AudioMixer4              mixerMarker3; //xy=1273,584
-AudioMixer4              mixerMarker4; //xy=1274,664
-AudioMixer4              mixerMarker5; //xy=1274,744
-AudioMixer4              mixerMarker6; //xy=1279,828
-AudioMixer4              mixerMarker7; //xy=1280,913
-AudioMixer4              mixerMarker8; //xy=1283,988
 AudioAnalyzeToneDetect   toneMarker1;    //xy=1506,410
 AudioAnalyzeToneDetect   toneMarker2;    //xy=1510,498
 AudioAnalyzeToneDetect   toneMarker3; //xy=1512,584
-AudioAnalyzeToneDetect   toneMarker4; //xy=1512,664
-AudioAnalyzeToneDetect   toneMarker5; //xy=1514,742
-AudioAnalyzeToneDetect   toneMarker7; //xy=1516,913
-AudioAnalyzeToneDetect   toneMarker8; //xy=1518,991
-AudioAnalyzeToneDetect   toneMarker6; //xy=1519,826
 AudioConnection          patchCord1(i2s1, 0, mixerLeft, 0);
 AudioConnection          patchCord2(i2s1, 1, filterMarker, 0);
 AudioConnection          patchCord3(i2s1, 1, mixerRight, 0);
 AudioConnection          patchCord4(filterMarker, 0, mixerMarker, 0);
 AudioConnection          patchCord5(mixerLeft, filterLeft);
 AudioConnection          patchCord6(mixerRight, filterRight);
-AudioConnection          patchCord8(mixerMarker, filterBand1);
-AudioConnection          patchCord9(mixerMarker, filterBand2);
-AudioConnection          patchCord10(mixerMarker, filterBand3);
-AudioConnection          patchCord11(mixerMarker, filterBand4);
-AudioConnection          patchCord12(mixerMarker, filterBand5);
-AudioConnection          patchCord13(mixerMarker, filterBand6);
-AudioConnection          patchCord14(mixerMarker, filterBand7);
-AudioConnection          patchCord15(mixerMarker, filterBand8);
-AudioConnection          patchCord16(filterRight, 0, i2s2, 1);
-AudioConnection          patchCord17(filterLeft, 0, i2s2, 0);
-AudioConnection          patchCord18(filterBand1, 0, mixerMarker1, 0);
-AudioConnection          patchCord19(filterBand2, 0, mixerMarker2, 0);
-AudioConnection          patchCord20(filterBand3, 0, mixerMarker3, 0);
-AudioConnection          patchCord21(filterBand4, 0, mixerMarker4, 0);
-AudioConnection          patchCord22(filterBand5, 0, mixerMarker5, 0);
-AudioConnection          patchCord23(filterBand6, 0, mixerMarker6, 0);
-AudioConnection          patchCord24(filterBand7, 0, mixerMarker7, 0);
-AudioConnection          patchCord25(filterBand8, 0, mixerMarker8, 0);
-AudioConnection          patchCord26(mixerMarker1, toneMarker1);
-AudioConnection          patchCord27(mixerMarker2, toneMarker2);
-AudioConnection          patchCord28(mixerMarker3, toneMarker3);
-AudioConnection          patchCord29(mixerMarker4, toneMarker4);
-AudioConnection          patchCord30(mixerMarker5, toneMarker5);
-AudioConnection          patchCord31(mixerMarker6, toneMarker6);
-AudioConnection          patchCord32(mixerMarker7, toneMarker7);
-AudioConnection          patchCord33(mixerMarker8, toneMarker8);
-AudioControlSGTL5000     sgtl5000_1;     //xy=827,182
-// End automatically generated code
+AudioConnection          patchCord7(mixerMarker, filterBand1);
+AudioConnection          patchCord8(mixerMarker, filterBand2);
+AudioConnection          patchCord9(mixerMarker, filterBand3);
+AudioConnection          patchCord10(filterRight, 0, i2s2, 1);
+AudioConnection          patchCord11(filterLeft, 0, i2s2, 0);
+AudioConnection          patchCord12(filterBand1, 0, mixerMarker1, 0);
+AudioConnection          patchCord13(filterBand2, 0, mixerMarker2, 0);
+AudioConnection          patchCord14(filterBand3, 0, mixerMarker3, 0);
+AudioConnection          patchCord15(mixerMarker1, toneMarker1);
+AudioConnection          patchCord16(mixerMarker2, toneMarker2);
+AudioConnection          patchCord17(mixerMarker3, toneMarker3);
+AudioControlSGTL5000     sgtl5000_1;     //xy=858,202
+// GUItool: end automatically generated code
+
 
 // For optimal detection, the target frequencies should be integer multiples of the sampling rate divided by the amount of sampled cycles
 float SAMPELING_FREQUENCY = 44100; // Hz
@@ -132,10 +103,8 @@ float mixerLeftGain = 0.5;
 float mixerRightGain = 0.5;
 float mixerMarkerGain = 2.4;
 
-float lowpassQualityLeft1 = 1.0;
-float lowpassQualityLeft2 = 1.0;
-float lowpassQualityRight1 = 1.0;
-float lowpassQualityRight2 = 1.0;
+float lowpassQualityLeft1 = 5.0;
+float lowpassQualityRight1 = 5.0;
 float highpassQuality = 8.0;
 float bandFilterQuality = 8.0;
 
@@ -153,8 +122,17 @@ void setup(){
   filterLeft.setLowpass(0, FILTER_FREQ, lowpassQualityLeft1);
   filterRight.setLowpass(0, FILTER_FREQ, lowpassQualityRight1);
 
-  filterLeft.setLowpass(1, FILTER_FREQ, lowpassQualityLeft2);
-  filterRight.setLowpass(1, FILTER_FREQ, lowpassQualityRight2);
+  filterLeft.setNotch(1, bits[SIGNAL_TONE].frequency);
+  filterRight.setNotch(1, bits[SIGNAL_TONE].frequency);
+
+  filterLeft.setNotch(2, bits[DATA_LOW].frequency);
+  filterRight.setNotch(2, bits[DATA_LOW].frequency);
+
+  filterLeft.setNotch(3, bits[DATA_HIGH].frequency);
+  filterRight.setNotch(3, bits[DATA_HIGH].frequency);
+
+  // filterLeft.setLowpass(1, FILTER_FREQ, lowpassQualityLeft2);
+  // filterRight.setLowpass(1, FILTER_FREQ, lowpassQualityRight2);
 
   // Initialize highpass filter
   filterMarker.setHighpass(0, FILTER_FREQ, highpassQuality);

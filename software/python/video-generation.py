@@ -13,7 +13,8 @@ INPUT_DIR = os.path.abspath(r"../../media/wav")
 OUTPUT_DIR = r"./"
 size = 1920//11
 
-TEST_VALUES = [2**x for x in range(8)]
+# TEST_VALUES = [2**x for x in range(8)]
+TEST_VALUES = [255 for x in range(8)]
 
 for val in TEST_VALUES:
     soundfile = os.path.join(INPUT_DIR, f"{val}.wav")
@@ -64,7 +65,7 @@ time.sleep(2)
 
 # %%
 
-for  val in [2**x for x in range(8)]:
+for  val in TEST_VALUES:
     os.remove(f"./sound{val}.wav")
     os.remove(f"./movie{val}.mp4")
     
