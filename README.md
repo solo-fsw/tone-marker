@@ -1,9 +1,11 @@
 # Tone Marker
 
 ## Introduction
-The purpose of the "Tone Marker" device is to translate high-frequency tones ($\ge$ 15 kHz) into Transistor-transistor Logic (TTL) markers. This allows any application with an audio output (e.g. virtual reality games, websites, cellphones) to send custom markers (values ranging from 0 up to 255) by embedding these marker tones in the audio output.
+The purpose of the "Tone Marker" device is to translate high-frequency tones ($\ge$ 15 kHz) into Transistor-transistor Logic (TTL) markers. This allows any application with an audio output (e.g. virtual reality games, websites, cellphones) to send custom markers (values ranging from 0 up to 255) by embedding these marker tones in the audio output. The tones are filtered out and not audible to the participants.
 
 Sending markers is necessary for synchronization of recorded data (e.g. BIOPAC measurements) with VR experiences, where hardware control is not possible. Marker tones are chosen in such a way that they are inaudible for the participant (through audio filtering).
+
+The Tone Marker device is shown below. Note that the circles above the D7 to D0 label are LEDS indicating the currently active marker.
 
 ![The Tone Marker device](./readme-media/tone-marker-front.jpg)
 ![The Tone Marker device](./readme-media/tone-marker-back.jpg)
@@ -29,10 +31,6 @@ Frequencies are detected by the Goertzel algorithm, and are therefore optimized 
 - **Signal frequency**: 15288.0 Hz
 - **Data LOW frequency**: 15582.0 Hz
 - **Data HIGH frequency**: 15876.0 Hz
-
-Soundfiles for marker values under this encoding can be found in this repository (in the `media` directory). This directory also contains a movie file (`marker-testing.mp4`) that can be used to test marker accuracy in your setup. Custom test movies can be made by running `software/python/video-generation.py`.
-
-Overall, usage of the `.wav` files is recommended, since they are less compressed than the `.mp3` files.
 
 ## Known Issues
 
