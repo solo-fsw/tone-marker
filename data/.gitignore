@@ -1,6 +1,0 @@
-# Ignore everything in this folder
-*
-
-# Except the .gitignore and the README
-!.gitignore
-!README.md
