@@ -32,6 +32,10 @@ Frequencies are detected by the Goertzel algorithm, and are therefore optimized 
 - **Data LOW frequency**: 15582.0 Hz
 - **Data HIGH frequency**: 15876.0 Hz
 
+### Delay
+
+Due to time needed for communication and calculation of markers, there is a delay between the onset of the marker tones and the detection of a marker by a marker recipient (such as a Biopac). This delay is approximately $1668$ ms, with a standard deviation of $5.66$ ms.
+
 ## Known Issues
 
 ### Transient Marker Values
