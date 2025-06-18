@@ -13,6 +13,8 @@
 #define N_BITS 3
 #define N_UNUSED_BITS 5
 
+// Tool: https://www.pjrc.com/teensy/gui/
+
 // GUItool: begin automatically generated code
 AudioInputI2S            i2s1;           //xy=101,321
 AudioFilterBiquad        filterMarker;   //xy=346,417
