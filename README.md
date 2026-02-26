@@ -10,7 +10,15 @@ The Tone Marker device is shown below. Note that the circles above the D7 to D0 
 ![The Tone Marker device](./readme-media/tone-marker-front.jpg)
 ![The Tone Marker device](./readme-media/tone-marker-back.jpg)
 
-## Usage
+## How to use it in your project?
+
+1. Open your original audio or video file in editing software such as Audacity or Adobe Premiere Pro.
+2. Download the audio files from the `media` folder. Both MP3 and WAV formats are available — choose the format that best fits your project requirements.
+3. Create a new audio track in your editing software, and place the tone markers at the exact timestamps where you want to trigger events or synchronize actions.
+4. Make sure that the marker track aligns correctly with the original audio.
+5. Export the final project with both audio tracks included, so the tone markers can overlap with the original audio.
+
+## How was Tone Marker device implemented?
 
 ### Setup
 The Tone Marker device consists of a [Teensy 4.0](https://www.pjrc.com/store/teensy40.html) soldered to a custom PCB, which is based on the [Teensy Audio Shield](https://www.pjrc.com/store/teensy3_audio.html).
