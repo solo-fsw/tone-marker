@@ -2,3 +2,4 @@
 
 # For example: the following line excludes the entire .vscode folder from version control
 .vscode/
+/software/arduino/tone-marker/build
